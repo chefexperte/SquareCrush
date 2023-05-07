@@ -7,7 +7,7 @@ from pygame import Surface
 from draw import draw_rotated_rect
 from game import GRID_SIZE, TILE_SIZE, COLORS, Game, Animation, WINDOW_HEIGHT, WINDOW_WIDTH, BOARD_OFFSET
 from visual.animation import FALL_SPEED, ANIMATION_SPEED
-from visual.effect import play_explosion
+from visual.effect import play_explosion, play_bonus_point_effect
 
 
 def draw_board(screen, game):
@@ -53,7 +53,7 @@ def remove_tile(game: Game, bl: tuple[int, int]):
 
 def main(game: Game):
 	remove_combinations(game)
-	pygame.init()
+	pygame.font.init()
 	screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 	pygame.display.set_caption('IQ Crush')
 
@@ -63,13 +63,23 @@ def main(game: Game):
 
 	running = True
 	dragging = False
+	lock_timeout = True
 
 	clock = pygame.time.Clock()
 
 	while running:
 		clock.tick(game.FPS)
+		if len(game.no_draw) > 0:
+			game.input_locked = True
+		else:
+			if game.input_locked:
+				lock_timeout -= 1
+				if lock_timeout == 0:
+					lock_timeout = 5
+					game.input_locked = False
 		for event in pygame.event.get():
-			swap_drag(event, game)
+			if not game.input_locked:
+				swap_drag(event, game)
 			if event.type == pygame.QUIT:
 				print("Quitting the game")
 				running = False
@@ -82,7 +92,7 @@ def main(game: Game):
 		game.score_label = game.title_font.render(f"Score: {game.score}", True, (255, 255, 255))
 		screen.blit(game.score_label, (WINDOW_WIDTH // 2 - game.score_label.get_width() // 2, 50))
 		pygame.display.flip()
-	pygame.quit()
+	pygame.font.quit()
 
 
 def refill_tiles(game: Game):
@@ -112,6 +122,23 @@ def process_combinations(game: Game):
 			game.no_draw.add(block)
 			game.animations.append(anim)
 			play_explosion(game, block)
+		if len(comb) > 3:
+			x_total = 0
+			y_total = 0
+			for tile in comb:
+				x_total += tile[0]
+				y_total += tile[1]
+			center_x = x_total / len(comb)
+			center_y = y_total / len(comb)
+			color = game.board[comb[0][0]][comb[0][1]].color
+			color = (min(255, color[0] + 50), min(255, color[1] + 50), min(255, color[2] + 50))
+			bonus = 1
+			match len(comb):
+				case 4:
+					bonus = 2
+				case 5:
+					bonus = 5
+			play_bonus_point_effect(game, color, (center_x, center_y), 2, len(comb) + bonus)
 
 
 def run_animations(screen: Surface, game: Game):
@@ -135,8 +162,8 @@ def run_animations(screen: Surface, game: Game):
 		y_diff_total = y2 - y0
 		angle_diff_total = angle2 - angle0
 		size_diff_total = size2 - size0
-		anim.curr = (x0 + x_diff_total * anim.progress, y0 + y_diff_total * anim.progress,
-					 angle0 + angle_diff_total * anim.progress, size0 + size_diff_total * anim.progress)
+		anim.curr = (x0 + x_diff_total * anim.get_anim_type_progress(), y0 + y_diff_total * anim.get_anim_type_progress(),
+					 angle0 + angle_diff_total * anim.get_anim_type_progress(), size0 + size_diff_total * anim.get_anim_type_progress())
 		if anim.progress >= 1:
 			if anim.on_finish:
 				anim.on_finish()
@@ -177,8 +204,8 @@ def find_combinations_old(game):
 def find_combinations(game):
 	combinations = []
 	# check vertical combinations
-	for i in range(GRID_SIZE - 2):
-		for j in range(GRID_SIZE):
+	for j in range(GRID_SIZE):
+		for i in range(GRID_SIZE - 2):
 			if ((i, j) in game.no_draw) or (game.board[i][j] is None):
 				continue
 			tile1 = game.board[i][j]
@@ -229,7 +256,8 @@ def find_combinations(game):
 				combinations.remove(comb)
 				combinations.remove(combination)
 				combinations.append(list(set(combination).union(set(comb))))
-	combinations.sort()
+	combinations.sort(key=lambda x: len(x), reverse=True)
+	print(combinations) if len(combinations) > 0 else None
 	return combinations
 
 

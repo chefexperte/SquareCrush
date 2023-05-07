@@ -25,6 +25,7 @@ class Game:
 	score_label: pygame.surface.Surface = None
 	FPS = 120
 	score = 0
+	input_locked = False
 
 	def __init__(self):
 		self.animations: list[Animation] = []

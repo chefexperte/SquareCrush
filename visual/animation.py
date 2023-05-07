@@ -31,3 +31,12 @@ class Animation:
 	anim_type: str = "lin"
 	on_finish = None
 	speed: float = ANIMATION_SPEED
+
+	def get_anim_type_progress(self) -> float:
+		if self.anim_type == "ease_out":
+			t = self.progress - 1
+			return t * t * t + 1
+		if self.anim_type == "ease_in":
+			t = self.progress
+			return t ** 3
+		return self.progress
