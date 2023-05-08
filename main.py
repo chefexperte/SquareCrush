@@ -58,7 +58,7 @@ def main(game: Game):
 	remove_combinations(game)
 	pygame.font.init()
 	game.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-	pygame.display.set_caption('IQ Crush')
+	pygame.display.set_caption('Square Crush')
 
 	# init fonts
 	game_fonts = GameFonts()
