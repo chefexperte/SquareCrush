@@ -1,6 +1,8 @@
+import enum
 import random
 
 import pygame
+from pygame import Surface
 
 from tile import Tile, COLORS
 from visual.animation import Animation
@@ -16,19 +18,30 @@ def create_board():
 	return [[Tile(random.choice(COLORS)) for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
 
 
+class GameState(enum.Enum):
+	MAIN_MENU = 0
+	IN_GAME = 1
+	PAUSE_MENU = 2
+
+
 class Game:
 	first_tile = None
 	board = create_board()
 	no_draw: set[tuple] = set()
 	animations: list[Animation] = None
-	title_font: pygame.font.Font = None
-	score_label: pygame.surface.Surface = None
 	FPS = 120
 	score = 0
 	input_locked = False
+	current_state = GameState.MAIN_MENU
+	screen: Surface = None
+	mouse_pos: tuple[float, float] = None
+	chain_size: int = 0
 
 	def __init__(self):
 		self.animations: list[Animation] = []
 
 	def add_score(self, score: int):
 		self.score += score
+
+	def set_state(self, state: GameState):
+		self.current_state = state

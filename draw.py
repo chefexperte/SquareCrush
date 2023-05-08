@@ -1,5 +1,5 @@
 import pygame
-from pygame import Surface
+from pygame import Surface, Rect
 
 
 def draw_rotated_rect(screen: Surface, color: (int, int, int), pos: (int, int), width: float, height: float,
