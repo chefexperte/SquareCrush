@@ -1,3 +1,5 @@
+from typing import Callable
+
 import pygame
 from pygame import Rect, Surface
 from pygame.font import Font
@@ -7,11 +9,11 @@ from draw import draw_rotated_rect
 
 class Button:
 	text: str = ""
-	font: Font = None
-	rect: Rect = None
-	screen: Surface = None
+	font: Font
+	rect: Rect
+	screen: Surface
 	label: Surface = property(lambda self: self.font.render(self.text, True, (255, 255, 255)))
-	on_click = None
+	on_click: Callable
 
 	def __init__(self, text: str, font: Font, rect: Rect, screen: Surface):
 		self.text = text

@@ -28,13 +28,13 @@ class Game:
 	first_tile = None
 	board = create_board()
 	no_draw: set[tuple] = set()
-	animations: list[Animation] = None
+	animations: list[Animation]
 	FPS = 120
 	score = 0
 	input_locked = False
 	current_state = GameState.MAIN_MENU
-	screen: Surface = None
-	mouse_pos: tuple[float, float] = None
+	screen: Surface
+	mouse_pos: tuple[float, float]
 	chain_size: int = 0
 
 	def __init__(self):

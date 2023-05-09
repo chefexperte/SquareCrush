@@ -8,13 +8,13 @@ from visual.text import GameFonts
 
 
 class MainMenu:
-	game: Game = None
+	game: Game
 	buttons: list[Button] = []
+	new_game_button: Button
 
 	def __init__(self, game: Game):
-		self.new_game_button = None
-		self.buttons = []
-		self.game = game
+		self.buttons: list[Button] = []
+		self.game: Game = game
 
 	def init(self, game_fonts: GameFonts):
 		rect_width = 400

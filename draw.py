@@ -2,8 +2,8 @@ import pygame
 from pygame import Surface, Rect
 
 
-def draw_rotated_rect(screen: Surface, color: (int, int, int), pos: (int, int), width: float, height: float,
-					  angle: float):
+def draw_rotated_rect(screen: Surface, color: tuple[int, int, int], pos: tuple[float, float], width: float,
+					  height: float, angle: float):
 	# Rechteck erstellen
 	rect_surface = pygame.Surface((width, height), pygame.SRCALPHA)
 	pygame.draw.rect(rect_surface, color, (0, 0, width, height))

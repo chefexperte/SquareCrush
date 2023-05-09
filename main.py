@@ -8,6 +8,7 @@ import menu
 import strings
 from draw import draw_rotated_rect
 from game import GRID_SIZE, TILE_SIZE, COLORS, Game, Animation, WINDOW_HEIGHT, WINDOW_WIDTH, BOARD_OFFSET, GameState
+from tile import Tile
 from visual.animation import FALL_SPEED, ANIMATION_SPEED
 from visual.effect import play_explosion, play_bonus_point_effect
 from visual.text import GameFonts
@@ -25,7 +26,7 @@ def draw_board(game):
 							  TILE_SIZE, TILE_SIZE), 0)
 
 
-def swap_tiles(game, pos1: tuple[int, int], pos2: tuple[int, int], animation_speed: float = None):
+def swap_tiles(game, pos1: tuple[int, int], pos2: tuple[int, int], animation_speed: float = ANIMATION_SPEED):
 	board = game.board
 	# add new animation
 	tile1 = board[pos1[0]][pos1[1]]
@@ -67,7 +68,7 @@ def main(game: Game):
 
 	running = True
 	dragging = False
-	lock_timeout = True
+	lock_timeout: int = 0
 
 	clock = pygame.time.Clock()
 
@@ -87,18 +88,20 @@ def main(game: Game):
 				game.input_locked = True
 			else:
 				if game.input_locked:
-					lock_timeout -= 1
-					if lock_timeout == 0:
+					if lock_timeout > 0:
+						lock_timeout -= 1
+					if lock_timeout <= 0:
 						lock_timeout = 1
 						game.input_locked = False
 			game.screen.fill((0, 0, 0))
 			draw_board(game)
 			run_animations(game)
 			process_combinations(game)
+			tile_gravity(game)
 			refill_tiles(game)
-			game.score_label = game_fonts.title_font.render(f"{strings.IN_GAME_SCORE}{game.score}", True,
+			game_fonts.score_label = game_fonts.title_font.render(f"{strings.IN_GAME_SCORE}{game.score}", True,
 															(255, 255, 255))
-			game.screen.blit(game.score_label, (WINDOW_WIDTH // 2 - game.score_label.get_width() // 2, 50))
+			game.screen.blit(game_fonts.score_label, (WINDOW_WIDTH // 2 - game_fonts.score_label.get_width() // 2, 50))
 			pygame.display.flip()
 
 		# global event logic
@@ -124,18 +127,34 @@ def main_menu_events(event, game: Game, main_menu: menu.MainMenu):
 					button.on_click()
 
 
-def refill_tiles(game: Game):
+def tile_gravity(game: Game):
 	# refill
-	refills = []
+	falls = []
 	for i in range(GRID_SIZE):
 		for j in range(GRID_SIZE):
 			if (i, j) in game.no_draw or (i, j - 1) in game.no_draw:
 				continue
 			if not game.board[i][j] and game.board[i][j - 1]:
 				if j > 0:
-					refills.append(((i, j), (i, j - 1)))
-	for refill in refills:
+					falls.append(((i, j), (i, j - 1)))
+	for refill in falls:
 		swap_tiles(game, refill[0], refill[1], FALL_SPEED)
+
+
+def refill_tiles(game: Game):
+	if len(game.no_draw) > 0:
+		return
+	empty_tiles = 0
+	for row in game.board:
+		for col in row:
+			if col is None:
+				empty_tiles += 1
+	if empty_tiles > 28:
+		for i in range(8):
+			print(game.board[i][0])
+			game.board[i][0] = Tile(random.choice(COLORS))
+			print(game.board[i][0])
+			print("---")
 
 
 def process_combinations(game: Game):
@@ -170,7 +189,8 @@ def process_combinations(game: Game):
 					bonus = 5
 			play_bonus_point_effect(game, color, (center_x, center_y), 2, len(comb) + bonus)
 		if game.chain_size >= 2:
-			play_bonus_point_effect(game, (60*game.chain_size, 25, 25), (center_x, center_y), 0.4 * game.chain_size, game.chain_size)
+			play_bonus_point_effect(game, (min(255, 60 * game.chain_size), 25, 25), (center_x, center_y), 0.4 * game.chain_size,
+									game.chain_size)
 
 
 def run_animations(game: Game):
@@ -195,9 +215,9 @@ def run_animations(game: Game):
 		angle_diff_total = angle2 - angle0
 		size_diff_total = size2 - size0
 		anim.curr = (
-		x0 + x_diff_total * anim.get_anim_type_progress(), y0 + y_diff_total * anim.get_anim_type_progress(),
-		angle0 + angle_diff_total * anim.get_anim_type_progress(),
-		size0 + size_diff_total * anim.get_anim_type_progress())
+			x0 + x_diff_total * anim.get_anim_type_progress(), y0 + y_diff_total * anim.get_anim_type_progress(),
+			angle0 + angle_diff_total * anim.get_anim_type_progress(),
+			size0 + size_diff_total * anim.get_anim_type_progress())
 		if anim.progress >= 1:
 			if anim.on_finish:
 				anim.on_finish()
