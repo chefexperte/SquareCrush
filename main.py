@@ -1,14 +1,14 @@
+#!/bin/python
+import os
 import random
-import warnings
 
 import pygame
-from pygame import Surface
 
-import menu
 import strings
 from draw import draw_rotated_rect
 from game import GRID_SIZE, TILE_SIZE, COLORS, Game, Animation, WINDOW_HEIGHT, WINDOW_WIDTH, BOARD_OFFSET, GameState
-from tile import Tile
+from tile import Tile, TileAddon
+from rooms import main_menu as mm, level_selection
 from visual.animation import FALL_SPEED, ANIMATION_SPEED
 from visual.effect import play_explosion, play_bonus_point_effect
 from visual.text import GameFonts
@@ -24,6 +24,11 @@ def draw_board(game):
 			pygame.draw.rect(game.screen, game.board[i][j].color,
 							 (i * TILE_SIZE + BOARD_OFFSET[0], j * TILE_SIZE + BOARD_OFFSET[1],
 							  TILE_SIZE, TILE_SIZE), 0)
+			if game.board[i][j].addon and game.board[i][j].addon == TileAddon.BLOCKER:
+				draw_rotated_rect(game.screen, (0, 0, 0),
+								  ((i + 0.5) * TILE_SIZE + BOARD_OFFSET[0], (j + 0.5) * TILE_SIZE + BOARD_OFFSET[1]),
+								  TILE_SIZE,
+								  TILE_SIZE, 0, 200)
 
 
 def swap_tiles(game, pos1: tuple[int, int], pos2: tuple[int, int], animation_speed: float = ANIMATION_SPEED):
@@ -63,8 +68,10 @@ def main(game: Game):
 
 	# init fonts
 	game_fonts = GameFonts()
-	main_menu = menu.MainMenu(game)
+	main_menu = mm.MainMenu(game)
 	main_menu.init(game_fonts)
+	level_sel = level_selection.LevelSelection(game)
+	level_sel.init(game_fonts)
 
 	running = True
 	dragging = False
@@ -82,6 +89,9 @@ def main(game: Game):
 		if game.current_state == GameState.MAIN_MENU:
 			# main menu logic
 			main_menu.draw_main_menu()
+		elif game.current_state == GameState.LEVEL_SELECTION:
+			# main menu logic
+			level_sel.draw_level_selection()
 		elif game.current_state == GameState.IN_GAME:
 			# in game logic
 			if len(game.no_draw) > 0:
@@ -100,7 +110,7 @@ def main(game: Game):
 			tile_gravity(game)
 			refill_tiles(game)
 			game_fonts.score_label = game_fonts.title_font.render(f"{strings.IN_GAME_SCORE}{game.score}", True,
-															(255, 255, 255))
+																  (255, 255, 255))
 			game.screen.blit(game_fonts.score_label, (WINDOW_WIDTH // 2 - game_fonts.score_label.get_width() // 2, 50))
 			pygame.display.flip()
 
@@ -112,6 +122,8 @@ def main(game: Game):
 				break
 			if game.current_state == GameState.MAIN_MENU:
 				main_menu_events(event, game, main_menu)
+			elif game.current_state == GameState.LEVEL_SELECTION:
+				level_selection_events(event, game, level_sel)
 			elif game.current_state == GameState.IN_GAME:
 				if not game.input_locked:
 					swap_drag(event, game)
@@ -119,10 +131,18 @@ def main(game: Game):
 	pygame.font.quit()
 
 
-def main_menu_events(event, game: Game, main_menu: menu.MainMenu):
+def main_menu_events(event, game: Game, main_menu: mm.MainMenu):
 	if event.type == pygame.MOUSEBUTTONDOWN:
 		if event.button == 1:  # Left mouse button
 			for button in main_menu.buttons:
+				if button.rect.collidepoint(game.mouse_pos):
+					button.on_click()
+
+
+def level_selection_events(event, game: Game, level_sel: level_selection.LevelSelection):
+	if event.type == pygame.MOUSEBUTTONDOWN:
+		if event.button == 1:  # Left mouse button
+			for button in level_sel.buttons:
 				if button.rect.collidepoint(game.mouse_pos):
 					button.on_click()
 
@@ -150,11 +170,16 @@ def refill_tiles(game: Game):
 			if col is None:
 				empty_tiles += 1
 	if empty_tiles > 28:
-		for i in range(8):
-			print(game.board[i][0])
-			game.board[i][0] = Tile(random.choice(COLORS))
-			print(game.board[i][0])
-			print("---")
+		for i in range(GRID_SIZE):
+			if game.board[i][0] is None:
+				col = random.choice(COLORS)
+				anim = Animation(col, (i + 0.5, -0.5, 180, 0), (i + 0.5, 0.5, 0, 1))
+				anim.on_finish = \
+					lambda i=i: game.no_draw.remove((i, 0)) if (i, 0) in game.no_draw else print(
+						f"tried to remove {(i, 0)}")
+				game.animations.append(anim)
+				game.board[i][0] = Tile(col)
+				game.no_draw.add((i, 0))
 
 
 def process_combinations(game: Game):
@@ -189,7 +214,8 @@ def process_combinations(game: Game):
 					bonus = 5
 			play_bonus_point_effect(game, color, (center_x, center_y), 2, len(comb) + bonus)
 		if game.chain_size >= 2:
-			play_bonus_point_effect(game, (min(255, 60 * game.chain_size), 25, 25), (center_x, center_y), 0.4 * game.chain_size,
+			play_bonus_point_effect(game, (min(255, 60 * game.chain_size), 25, 25), (center_x, center_y),
+									0.4 * game.chain_size,
 									game.chain_size)
 
 
@@ -227,19 +253,20 @@ def run_animations(game: Game):
 
 def find_combinations(game):
 	combinations = []
+
 	# check vertical combinations
 	for j in range(GRID_SIZE):
 		for i in range(GRID_SIZE - 2):
-			if ((i, j) in game.no_draw) or (game.board[i][j] is None):
-				continue
-			tile1 = game.board[i][j]
+			tile1: Tile = game.board[i][j]
 			tile1_color = tile1.color if tile1 else None
+			if ((i, j) in game.no_draw) or (tile1 is None) or not tile1.can_combine():
+				continue
 			comb_size = 1
 			# go through each piece in the row to check for same color
 			for n in range(1, GRID_SIZE - i):
 				tile2 = game.board[i + n][j]
 				tile2_color = tile2.color if tile2 else None
-				if tile1_color == tile2_color and ((i + n, j) not in game.no_draw):
+				if tile1_color == tile2_color and ((i + n, j) not in game.no_draw) and tile2.can_combine():
 					comb_size += 1
 				else:
 					break
@@ -250,16 +277,16 @@ def find_combinations(game):
 	# check horizontal combinations
 	for i in range(GRID_SIZE):
 		for j in range(GRID_SIZE - 2):
-			tile1 = game.board[i][j]
+			tile1: Tile = game.board[i][j]
 			tile1_color = tile1.color if tile1 else None
-			if ((i, j) in game.no_draw) or (tile1_color is None):
+			if ((i, j) in game.no_draw) or (tile1 is None) or not tile1.can_combine():
 				continue
 			comb_size = 1
 			# go through each piece in the row to check for same color
 			for n in range(1, GRID_SIZE - j):
 				tile2 = game.board[i][j + n]
 				tile2_color = tile2.color if tile2 else None
-				if tile1_color == tile2_color and ((i, j + n) not in game.no_draw):
+				if tile1_color == tile2_color and ((i, j + n) not in game.no_draw) and tile2.can_combine():
 					comb_size += 1
 				else:
 					break
@@ -315,7 +342,8 @@ def swap_drag(event, game):
 					# vertical
 					new_y = 1 if ydiff > 0 else -1
 				grid_x, grid_y = game.first_tile[0] + new_x, game.first_tile[1] + new_y
-				swap_tiles(game, game.first_tile, (grid_x, grid_y))
+				if game.board[game.first_tile[0]][game.first_tile[1]].can_be_moved() and game.board[grid_x][grid_y].can_be_moved():
+					swap_tiles(game, game.first_tile, (grid_x, grid_y))
 				game.chain_size = 0
 			game.first_tile = None
 
@@ -329,5 +357,8 @@ def remove_combinations(game: Game):
 
 
 if __name__ == "__main__":
+	# If I don't do this window decorations stink on Gnome :(
+	os.environ['SDL_VIDEODRIVER'] = "x11"
+	os.environ['GDK_BACKEND'] = "x11"
 	_game = Game()
 	main(_game)

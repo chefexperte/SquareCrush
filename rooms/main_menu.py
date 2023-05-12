@@ -22,7 +22,7 @@ class MainMenu:
 		rect_center = (WINDOW_WIDTH // 2, 50)
 		rect = Rect(rect_center[0] - rect_width / 2, rect_center[1] - rect_height / 2, rect_width, rect_height)
 		self.new_game_button = Button(strings.MAIN_MENU_NEW_GAME, game_fonts.title_font, rect, self.game.screen)
-		self.new_game_button.on_click = lambda: self.game.set_state(GameState.IN_GAME)
+		self.new_game_button.on_click = lambda: self.game.set_state(GameState.LEVEL_SELECTION)
 		self.buttons.append(self.new_game_button)
 
 	def draw_main_menu(self):

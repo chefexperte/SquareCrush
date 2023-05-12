@@ -7,7 +7,7 @@ from pygame import Surface
 from tile import Tile, COLORS
 from visual.animation import Animation
 
-GRID_SIZE = 8
+GRID_SIZE = 9
 TILE_SIZE = 64
 WINDOW_WIDTH = GRID_SIZE * TILE_SIZE
 WINDOW_HEIGHT = GRID_SIZE * TILE_SIZE + 150
@@ -20,8 +20,9 @@ def create_board():
 
 class GameState(enum.Enum):
 	MAIN_MENU = 0
-	IN_GAME = 1
-	PAUSE_MENU = 2
+	LEVEL_SELECTION = 1
+	IN_GAME = 2
+	PAUSE_MENU = 3
 
 
 class Game:
