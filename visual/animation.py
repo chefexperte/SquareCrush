@@ -1,14 +1,16 @@
 from typing import Callable
 
-ANIMATION_SPEED = 5
-EXPLOSION_SPEED = 4
-FALL_SPEED = 12.5
+from tile import Tile
+
+ANIMATION_SPEED = 2.5
+EXPLOSION_SPEED = 2
+FALL_SPEED = 6.25
 
 
 class Animation:
-	def __init__(self, color: tuple[int, int, int] = (0, 0, 0), start: tuple = (0, 0),
+	def __init__(self, tile: Tile = (0, 0, 0), start: tuple = (0, 0),
 				 end: tuple = (0, 0), anim_type: str = "lin", speed: float = ANIMATION_SPEED):
-		self.color = color
+		self.tile = tile
 		if len(start) != len(end):
 			raise ValueError("Start and end tuples have to be the same length")
 		if len(start) == 2:
@@ -24,7 +26,7 @@ class Animation:
 		self.speed = speed
 
 	progress: float = 0
-	color: tuple[int, int, int] = None
+	tile: Tile = None
 	# x, y, rot, size
 	start: tuple[float, float, float, float] = None
 	curr: tuple[float, float, float, float] = None

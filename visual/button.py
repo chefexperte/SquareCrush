@@ -24,7 +24,7 @@ class Button:
 	def draw(self, hover: bool = False):
 		rect = self.rect
 		if hover:
-			rect = rect.scale_by(1.05, 1.05)
+			rect = rect.scale_by(1.1, 1.1)
 		draw_rotated_rect(self.screen, (135, 85, 198), rect.center, rect.w, rect.h, 0)
 		points = [rect.topleft, rect.topright, rect.bottomright, rect.bottomleft]
 		pygame.draw.lines(self.screen, (185, 85, 238), True, points, 4)

@@ -29,7 +29,7 @@ class LevelSelection:
 				y += spacing + rect_size
 			rect = Rect(x, y, rect_size, rect_size)
 			button = Button(str(counter), game_fonts.title_font, rect, self.game.screen)
-			button.on_click = lambda: (self.game.set_state(GameState.IN_GAME), levels.levels.load_level(level))
+			button.on_click = lambda: (self.game.set_state(GameState.IN_GAME), levels.levels.load_level(self.game, level))
 			self.buttons.append(button)
 
 	def draw_level_selection(self):

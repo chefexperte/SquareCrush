@@ -1,5 +1,6 @@
 import enum
 import random
+from typing import Callable
 
 import pygame
 from pygame import Surface
@@ -32,6 +33,7 @@ class Game:
 	animations: list[Animation]
 	FPS = 120
 	score = 0
+	steps_left = 0
 	input_locked = False
 	current_state = GameState.MAIN_MENU
 	screen: Surface
@@ -40,9 +42,17 @@ class Game:
 
 	def __init__(self):
 		self.animations: list[Animation] = []
+		self.winning_condition: Callable[[Game], bool] = lambda game: False
 
 	def add_score(self, score: int):
 		self.score += score
 
 	def set_state(self, state: GameState):
 		self.current_state = state
+
+	def add_anim(self, anim: Animation):
+		self.animations.append(anim)
+
+	def remove_anim(self, anim: Animation):
+		if anim in self.animations:
+			self.animations.remove(anim)
