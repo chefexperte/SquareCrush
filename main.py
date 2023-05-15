@@ -8,7 +8,11 @@ import draw
 import strings
 from game import GRID_SIZE, TILE_SIZE, COLORS, Game, Animation, WINDOW_HEIGHT, WINDOW_WIDTH, BOARD_OFFSET, GameState
 from rooms import main_menu as mm, level_selection
+from rooms.level_selection import level_selection_events
+from rooms.main_menu import main_menu_events
 from tile import Tile
+from ui_object import UIObject
+from visual import image
 from visual.animation import FALL_SPEED, ANIMATION_SPEED
 from visual.effect import play_bonus_point_effect, play_block_break, create_circle_effect
 from visual.text import GameFonts
@@ -43,8 +47,17 @@ def remove_tile(game: Game, bl: tuple[int, int]):
 		print(f"{bl} was not in no_draw")
 
 
+def draw_ingame_ui(game: Game):
+	for o in game.ui_objects:
+		o.draw(game.screen)
+		if o.hitbox.collidepoint(game.mouse_pos):
+			o.hover(True)
+		else:
+			o.hover(False)
+
+
 def main(game: Game):
-	remove_combinations(game)
+	game.remove_combinations()
 	pygame.font.init()
 	game.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 	pygame.display.set_caption('Square Crush')
@@ -56,9 +69,12 @@ def main(game: Game):
 	level_sel = level_selection.LevelSelection(game)
 	level_sel.init(game_fonts)
 
+	arrow_back = image.load_image("arrow_back", (30, 30))
+	game.ui_objects.append(UIObject(arrow_back, pygame.Rect(15, 5, 30, 30), on_click=lambda: game.set_state(
+		GameState.LEVEL_SELECTION)))
+
 	running = True
 	dragging = False
-	lock_timeout: int = 0
 
 	clock = pygame.time.Clock()
 
@@ -81,32 +97,26 @@ def main(game: Game):
 				game.input_locked = True
 			else:
 				if game.input_locked:
-					if lock_timeout > 0:
-						lock_timeout -= 1
-					if lock_timeout <= 0:
-						lock_timeout = 1
+					if game.lock_timeout > 0:
+						game.lock_timeout -= 1
+					if game.lock_timeout == 0:
+						# lock_timeout = 0
 						game.input_locked = False
 			game.screen.fill((0, 0, 0))
 			draw.draw_board(game)
 			draw.run_animations(game)
+			pygame.draw.rect(game.screen, (97, 125, 117), (0, 0, WINDOW_WIDTH, 40))
+			draw_ingame_ui(game)
 			process_combinations(game)
 			tile_gravity(game)
 			refill_tiles(game)
-			if game.winning_condition(game) and len(game.no_draw) == 0:
-				game.winning_condition = lambda g: False
-				for anim in create_circle_effect((200, 25, 40), (4, 4), 3, 50):
-					game.animations.append(anim)
-				for anim in create_circle_effect((200, 25, 40), (4, 4), 1.5, 50):
-					game.animations.append(anim)
-				for anim in create_circle_effect((200, 25, 40), (4, 4), 4.5, 80):
-					game.animations.append(anim)
-
+			check_win(game)
 			game_fonts.score_label = game_fonts.title_font.render(f"{strings.IN_GAME_SCORE}{game.score}", True,
 																  (255, 255, 255))
 			steps_label = game_fonts.title_font.render(f"{strings.IN_GAME_STEPS}{game.steps_left}", True,
 													   (255, 255, 255))
-			game.screen.blit(game_fonts.score_label, (WINDOW_WIDTH // 2 - game_fonts.score_label.get_width() // 2, 50))
-			game.screen.blit(steps_label, (WINDOW_WIDTH // 2 - steps_label.get_width() // 2, 25))
+			game.screen.blit(game_fonts.score_label, (WINDOW_WIDTH // 2 - game_fonts.score_label.get_width() // 2, 70))
+			game.screen.blit(steps_label, (WINDOW_WIDTH // 2 - steps_label.get_width() // 2, 45))
 			pygame.display.flip()
 
 		# global event logic
@@ -120,26 +130,53 @@ def main(game: Game):
 			elif game.current_state == GameState.LEVEL_SELECTION:
 				level_selection_events(event, game, level_sel)
 			elif game.current_state == GameState.IN_GAME:
-				if not game.input_locked:
-					swap_drag(event, game)
+				in_game_events(event, game)
 
 	pygame.font.quit()
 
 
-def main_menu_events(event, game: Game, main_menu: mm.MainMenu):
-	if event.type == pygame.MOUSEBUTTONDOWN:
-		if event.button == 1:  # Left mouse button
-			for button in main_menu.buttons:
-				if button.rect.collidepoint(game.mouse_pos):
-					button.on_click()
+def in_game_events(event: pygame.event, game: Game):
+	game_rect = pygame.Rect(BOARD_OFFSET[0], BOARD_OFFSET[1], WINDOW_WIDTH, WINDOW_HEIGHT)
+	if not game.input_locked and game_rect.collidepoint(pygame.mouse.get_pos()):
+		swap_drag(event, game)
+	if not event.type == pygame.MOUSEBUTTONDOWN:
+		return
+	if event.button != 1:  # Left mouse button
+		return
+	for ui_object in game.ui_objects:
+		if ui_object.hovering:
+			ui_object.click()
+			break
 
 
-def level_selection_events(event, game: Game, level_sel: level_selection.LevelSelection):
-	if event.type == pygame.MOUSEBUTTONDOWN:
-		if event.button == 1:  # Left mouse button
-			for button in level_sel.buttons:
-				if button.rect.collidepoint(game.mouse_pos):
-					button.on_click()
+def check_win(game):
+	if game.winning_condition(game) and len(game.no_draw) == 0:
+		game.winning_condition = lambda g: False
+		game.input_locked = True
+		game.lock_timeout = False
+		sizes = (1.5, 2.5, 3.5, 4.5)
+		for size in sizes:
+			for anim in create_circle_effect((200, 25, 40), (4, 4), size, 80):
+				anim.delay = size * 0.5 - 0.75
+				game.animations.append(anim)
+
+		# destroy tiles for remaining steps
+		def destroy_remaining_tile(previous: Animation = None):
+			if game.steps_left <= 0:
+				return
+			# game.steps_left -= 1
+			pos = game.pick_random_tile()
+			tile = game.board[pos[0]][pos[1]]
+			dest = Animation()
+			if previous is not None:
+				dest.starting_condition = lambda game=game, ani=previous: (
+							ani not in game.animations and len(game.no_draw) <= 1)
+			dest.delay = 0.2
+			dest.on_start = lambda game=game, pos=pos, tile=tile: (game.add_score(5), game.dec_steps(), game.no_draw.add(pos),
+																   play_block_break(game, tile.color, pos))
+			dest.on_finish = lambda game=game, pos=pos, p=dest: (destroy_remaining_tile(p), remove_tile(game, pos))
+			game.animations.append(dest)
+		destroy_remaining_tile()
 
 
 def tile_gravity(game: Game):
@@ -178,18 +215,19 @@ def refill_tiles(game: Game):
 
 
 def process_combinations(game: Game):
-	combs = find_combinations(game)
+	combs = game.find_combinations()
 	# for comb in combs:
 	if len(combs) > 0:
 		comb = combs[0]
 		for block in comb:
 			start = (block[0] + 0.5, block[1] + 0.5, 0, 0)
 			end = (block[0] + 0.5, block[1] + 0.5, 180, 0)
-			anim = Animation(game.board[block[0]][block[1]], start, end)
+			tile = game.board[block[0]][block[1]]
+			anim = Animation(tile, start, end)
 			anim.on_finish = lambda bl=block: remove_tile(game, bl)
 			game.no_draw.add(block)
 			game.animations.append(anim)
-			play_block_break(game, block)
+			play_block_break(game, tile.color, block)
 		game.chain_size += 1
 		x_total = 0
 		y_total = 0
@@ -212,66 +250,6 @@ def process_combinations(game: Game):
 			play_bonus_point_effect(game, (min(255, 60 * game.chain_size), 25, 25), (center_x, center_y),
 									0.4 * game.chain_size,
 									game.chain_size)
-
-
-def find_combinations(game):
-	combinations = []
-
-	# check vertical combinations
-	for j in range(GRID_SIZE):
-		for i in range(GRID_SIZE - 2):
-			tile1: Tile = game.board[i][j]
-			tile1_color = tile1.color if tile1 else None
-			if ((i, j) in game.no_draw) or (tile1 is None) or not tile1.can_combine():
-				continue
-			comb_size = 1
-			# go through each piece in the row to check for same color
-			for n in range(1, GRID_SIZE - i):
-				tile2 = game.board[i + n][j]
-				tile2_color = tile2.color if tile2 else None
-				if tile1_color == tile2_color and ((i + n, j) not in game.no_draw) and tile2.can_combine():
-					comb_size += 1
-				else:
-					break
-			# append if combination is 3 or more
-			if comb_size >= 3:
-				combinations.append([(k, j) for k in range(i, i + comb_size)])
-				i += comb_size - 1
-	# check horizontal combinations
-	for i in range(GRID_SIZE):
-		for j in range(GRID_SIZE - 2):
-			tile1: Tile = game.board[i][j]
-			tile1_color = tile1.color if tile1 else None
-			if ((i, j) in game.no_draw) or (tile1 is None) or not tile1.can_combine():
-				continue
-			comb_size = 1
-			# go through each piece in the row to check for same color
-			for n in range(1, GRID_SIZE - j):
-				tile2 = game.board[i][j + n]
-				tile2_color = tile2.color if tile2 else None
-				if tile1_color == tile2_color and ((i, j + n) not in game.no_draw) and tile2.can_combine():
-					comb_size += 1
-				else:
-					break
-			# append if combination is 3 or more
-			if comb_size >= 3:
-				combinations.append([(i, k) for k in range(j, j + comb_size)])
-				j += comb_size - 1
-	# combine combinations that match up on edges
-	for combination in combinations.copy():
-		for comb in combinations.copy():
-			if combination == comb or comb not in combinations or combination not in combinations:
-				continue
-			c1f = combination[0]
-			c1l = combination[-1]
-			c2f = comb[0]
-			c2l = comb[-1]
-			if c1f == c2f or c1l == c2l or c1f == c2l or c1l == c2f:
-				combinations.remove(comb)
-				combinations.remove(combination)
-				combinations.append(list(set(combination).union(set(comb))))
-	combinations.sort(key=lambda x: len(x), reverse=True)
-	return combinations
 
 
 def swap_drag(event, game):
@@ -313,14 +291,6 @@ def swap_drag(event, game):
 						swap_tiles(game, game.first_tile, (grid_x, grid_y))
 				game.chain_size = 0
 			game.first_tile = None
-
-
-def remove_combinations(game: Game):
-	combs = find_combinations(game)
-	while len(combs) > 0:
-		combs = find_combinations(game)
-		for comb in combs:
-			game.board[comb[1][0]][comb[1][1]].color = random.choice(COLORS)
 
 
 if __name__ == "__main__":

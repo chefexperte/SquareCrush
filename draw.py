@@ -42,6 +42,14 @@ def draw_board(game):
 
 def run_animations(game: Game):
 	for anim in game.animations.copy():
+		if anim.starting_condition and not anim.starting_condition():
+			continue
+		if anim.delay > 0:
+			anim.delay -= (1 / game.FPS)
+			continue
+		if anim.progress == 0:
+			if anim.on_start:
+				anim.on_start()
 		x0, y0, angle0, size0 = anim.start
 		x1, y1, angle1, size1 = anim.curr
 		x2, y2, angle2, size2 = anim.end

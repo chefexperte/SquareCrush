@@ -3,6 +3,7 @@ from typing import Callable
 import tile
 from game import Game, GRID_SIZE
 from tile import Tile
+import game as ga
 
 
 class Level:
@@ -32,12 +33,20 @@ level_one = Level([
 	(5, 3, Tile(tile.TileColor.PINK.value, tile.TileAddon.BLOCKER))
 ], 15, lambda game: (game.score >= 100 and all_blockers_at_bottom(game)))
 
-LEVELS: list[Level] = [level_one]
+level_two = Level([], 15, lambda game: (game.score > 0))
+
+LEVELS: list[Level] = [level_one, level_two]
 
 
 def load_level(game: Game, level: Level):
 	print("Loading level...")
+	game.board = ga.create_board()
+	game.remove_combinations()
+	game.score = 0
+	game.animations.clear()
 	game.steps_left = level.max_steps
 	for special_block in level.special_blocks:
 		game.board[special_block[0]][special_block[1]] = special_block[2]
 	game.winning_condition = level.winning_condition
+	game.lock_timeout = 0
+	game.input_locked = False

@@ -7,8 +7,8 @@ from tile import Tile
 from visual.animation import Animation, EXPLOSION_SPEED, ANIMATION_SPEED
 
 
-def play_block_break(game: Game, pos: tuple[int, int]):
-	anims: list[Animation] = create_explosion_effect(game, pos)
+def play_block_break(game: Game, color: tuple[int, int, int], pos: tuple[int, int]):
+	anims: list[Animation] = create_explosion_effect(color, pos)
 	for i in range(len(anims)):
 		anim = anims[i]
 		score_pos = (WINDOW_WIDTH // 2 // TILE_SIZE, -110 / TILE_SIZE, 0, 0.1)
@@ -20,11 +20,11 @@ def play_block_break(game: Game, pos: tuple[int, int]):
 		game.animations.append(anim)
 
 
-def create_explosion_effect(game: Game, pos: tuple[int, int]):
+def create_explosion_effect(color: tuple[int, int, int], pos: tuple[int, int]):
 	animations: list[Animation] = []
 	particle_num = 10
 	for i in range(particle_num):
-		tile = game.board[pos[0]][pos[1]]
+		tile = Tile(color)
 		start = (pos[0], pos[1], random.random() * 180 - 90, 0.2)
 		end = (pos[0] + random.random() * 1.25 - 0.625, pos[1] + random.random() * 1.25 - 0.625,
 			   random.random() * 180 - 90, 0.35)

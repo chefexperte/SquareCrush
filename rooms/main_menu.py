@@ -32,3 +32,11 @@ class MainMenu:
 			hover = True
 		self.new_game_button.draw(hover)
 		pygame.display.flip()
+
+
+def main_menu_events(event, game: Game, main_menu: MainMenu):
+	if event.type == pygame.MOUSEBUTTONDOWN:
+		if event.button == 1:  # Left mouse button
+			for button in main_menu.buttons:
+				if button.rect.collidepoint(game.mouse_pos):
+					button.on_click()

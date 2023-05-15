@@ -8,8 +8,9 @@ FALL_SPEED = 6.25
 
 
 class Animation:
-	def __init__(self, tile: Tile = (0, 0, 0), start: tuple = (0, 0),
-				 end: tuple = (0, 0), anim_type: str = "lin", speed: float = ANIMATION_SPEED):
+	def __init__(self, tile: Tile = Tile((0, 0, 0)), start: tuple = (-1, -1),
+				 end: tuple = (-1, -1), anim_type: str = "lin", speed: float = ANIMATION_SPEED, delay: float = 0):
+		self.delay = delay
 		self.tile = tile
 		if len(start) != len(end):
 			raise ValueError("Start and end tuples have to be the same length")
@@ -33,7 +34,10 @@ class Animation:
 	end: tuple[float, float, float, float] = None
 	anim_type: str = "lin"
 	on_finish: Callable = None
+	on_start: Callable = None
+	starting_condition: Callable = None
 	speed: float = ANIMATION_SPEED
+	delay: float = 0
 
 	def get_anim_type_progress(self) -> float:
 		if self.anim_type == "ease_out":
