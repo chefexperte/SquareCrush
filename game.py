@@ -7,6 +7,7 @@ from pygame import Surface
 from tile import Tile, COLORS
 from ui_object import UIObject
 from visual.animation import Animation
+from visual.text import GameFonts
 
 GRID_SIZE = 9
 TILE_SIZE = 64
@@ -41,6 +42,7 @@ class Game:
 	mouse_pos: tuple[float, float]
 	chain_size: int = 0
 	ui_objects: list[UIObject]
+	game_fonts: GameFonts
 
 	def __init__(self):
 		self.animations: list[Animation] = []

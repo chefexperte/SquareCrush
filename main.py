@@ -11,7 +11,7 @@ from rooms import main_menu as mm, level_selection
 from rooms.level_selection import level_selection_events
 from rooms.main_menu import main_menu_events
 from tile import Tile
-from ui_object import UIObject
+from ui_object import UIObject, UILabel, REGISTRY
 from visual import image
 from visual.animation import FALL_SPEED, ANIMATION_SPEED
 from visual.effect import play_bonus_point_effect, play_block_break, create_circle_effect
@@ -63,15 +63,21 @@ def main(game: Game):
 	pygame.display.set_caption('Square Crush')
 
 	# init fonts
-	game_fonts = GameFonts()
+	game.game_fonts = GameFonts()
 	main_menu = mm.MainMenu(game)
-	main_menu.init(game_fonts)
+	main_menu.init()
 	level_sel = level_selection.LevelSelection(game)
-	level_sel.init(game_fonts)
+	level_sel.init()
 
 	arrow_back = image.load_image("arrow_back", (30, 30))
 	game.ui_objects.append(UIObject(arrow_back, pygame.Rect(15, 5, 30, 30), on_click=lambda: game.set_state(
 		GameState.LEVEL_SELECTION)))
+	score_label = UILabel("SCORE", pygame.font.Font(None, 36), (255, 255, 255), (WINDOW_WIDTH // 2, 80),
+						  ident="score_label")
+	game.ui_objects.append(score_label)
+	turns_label = UILabel("TURNS", pygame.font.Font(None, 36), (255, 255, 255), (WINDOW_WIDTH // 2, 55),
+						  ident="turns_label")
+	game.ui_objects.append(turns_label)
 
 	running = True
 	dragging = False
@@ -93,31 +99,7 @@ def main(game: Game):
 			level_sel.draw_level_selection()
 		elif game.current_state == GameState.IN_GAME:
 			# in game logic
-			if len(game.no_draw) > 0:
-				game.input_locked = True
-			else:
-				if game.input_locked:
-					if game.lock_timeout > 0:
-						game.lock_timeout -= 1
-					if game.lock_timeout == 0:
-						# lock_timeout = 0
-						game.input_locked = False
-			game.screen.fill((0, 0, 0))
-			draw.draw_board(game)
-			draw.run_animations(game)
-			pygame.draw.rect(game.screen, (97, 125, 117), (0, 0, WINDOW_WIDTH, 40))
-			draw_ingame_ui(game)
-			process_combinations(game)
-			tile_gravity(game)
-			refill_tiles(game)
-			check_win(game)
-			game_fonts.score_label = game_fonts.title_font.render(f"{strings.IN_GAME_SCORE}{game.score}", True,
-																  (255, 255, 255))
-			steps_label = game_fonts.title_font.render(f"{strings.IN_GAME_STEPS}{game.steps_left}", True,
-													   (255, 255, 255))
-			game.screen.blit(game_fonts.score_label, (WINDOW_WIDTH // 2 - game_fonts.score_label.get_width() // 2, 70))
-			game.screen.blit(steps_label, (WINDOW_WIDTH // 2 - steps_label.get_width() // 2, 45))
-			pygame.display.flip()
+			draw_in_game(game)
 
 		# global event logic
 		for event in pygame.event.get():
@@ -133,6 +115,34 @@ def main(game: Game):
 				in_game_events(event, game)
 
 	pygame.font.quit()
+
+
+def draw_in_game(game: Game):
+	if len(game.no_draw) > 0:
+		game.input_locked = True
+	else:
+		if game.input_locked:
+			if game.lock_timeout > 0:
+				game.lock_timeout -= 1
+			if game.lock_timeout == 0:
+				# lock_timeout = 0
+				game.input_locked = False
+	game.screen.fill((0, 0, 0))
+	draw.draw_board(game)
+	draw.run_animations(game)
+	pygame.draw.rect(game.screen, (97, 125, 117), (0, 0, WINDOW_WIDTH, 40))
+	draw_ingame_ui(game)
+	process_combinations(game)
+	tile_gravity(game)
+	refill_tiles(game)
+	check_win(game)
+	label: UIObject = REGISTRY.get("score_label")
+	if label and type(label) == UILabel:
+		label.text = f"{strings.IN_GAME_SCORE}{game.score}"
+	label: UIObject = REGISTRY.get("turns_label")
+	if label and type(label) == UILabel:
+		label.text = f"{strings.IN_GAME_STEPS}{game.steps_left}"
+	pygame.display.flip()
 
 
 def in_game_events(event: pygame.event, game: Game):

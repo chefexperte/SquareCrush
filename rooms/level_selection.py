@@ -15,7 +15,7 @@ class LevelSelection:
 		self.buttons: list[Button] = []
 		self.game: Game = game
 
-	def init(self, game_fonts: GameFonts):
+	def init(self):
 		spacing = 25
 		rect_size = 50
 		x = -rect_size
@@ -28,7 +28,7 @@ class LevelSelection:
 				x = spacing
 				y += spacing + rect_size
 			rect = Rect(x, y, rect_size, rect_size)
-			button = Button(str(counter), game_fonts.title_font, rect, self.game.screen)
+			button = Button(str(counter), self.game.game_fonts.title_font, rect, self.game.screen)
 			button.on_click = lambda level=level: (self.game.set_state(GameState.IN_GAME), levels.levels.load_level(self.game, level))
 			self.buttons.append(button)
 
