@@ -1,7 +1,8 @@
 from typing import Callable
 
 import tile
-from game import Game, GRID_SIZE
+from game import Game
+from consts import GRID_SIZE
 from tile import Tile
 import game as ga
 

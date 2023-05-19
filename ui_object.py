@@ -41,13 +41,12 @@ class UILabel(UIObject):
 	font: pygame.font.Font
 	color: tuple[int, int, int]
 
-	def __init__(self, text: str, font: pygame.font.Font, color: tuple[int, int, int], pos: tuple[int, int],
+	def __init__(self, text: str, font: pygame.font.Font, color: tuple[int, int, int], pos: tuple[float, float],
 				 on_hover: Callable = None, on_click: Callable = None, ident: str = None):
-		self._text = text
 		self.font = font
 		self.color = color
 		self.pos = pos
-		self.surface = self.font.render(self.text, True, self.color)
+		self.text = text
 		self.hitbox = pygame.Rect(pos, self.surface.get_size())
 		super().__init__(self.surface, self.hitbox, on_hover, on_click, ident)
 
@@ -59,7 +58,7 @@ class UILabel(UIObject):
 	def draw(self, screen: pygame.Surface) -> None:
 		screen.blit(self.surface, self.center_pos())
 
-	def center_pos(self) -> tuple[int, int]:
+	def center_pos(self) -> tuple[float, float]:
 		return self.pos[0] - self.surface.get_width() // 2, self.pos[1] - self.surface.get_height() // 2
 
 	text: str = property(lambda self: self._text, set_text)

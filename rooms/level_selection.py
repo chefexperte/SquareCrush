@@ -2,7 +2,8 @@ import pygame
 from pygame import Rect
 
 import levels.levels
-from game import WINDOW_WIDTH, Game, GameState
+from game import Game, GameState
+from consts import WINDOW_WIDTH
 from visual.button import Button
 from visual.text import GameFonts
 

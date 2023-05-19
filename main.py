@@ -6,35 +6,36 @@ import pygame
 
 import draw
 import strings
-from game import GRID_SIZE, TILE_SIZE, COLORS, Game, Animation, WINDOW_HEIGHT, WINDOW_WIDTH, BOARD_OFFSET, GameState
+from game import COLORS, Game, GameState, run_animations
+from consts import GRID_SIZE, TILE_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT, BOARD_OFFSET
 from rooms import main_menu as mm, level_selection
 from rooms.level_selection import level_selection_events
 from rooms.main_menu import main_menu_events
 from tile import Tile
 from ui_object import UIObject, UILabel, REGISTRY
 from visual import image
-from visual.animation import FALL_SPEED, ANIMATION_SPEED
-from visual.effect import play_bonus_point_effect, play_block_break, create_circle_effect
+from visual.animation import TileAnimation
+from visual.effect import play_bonus_point_effect, play_block_break, create_circle_effect, play_shout_popup_effect
 from visual.text import GameFonts
 
 
-def swap_tiles(game, pos1: tuple[int, int], pos2: tuple[int, int], animation_speed: float = ANIMATION_SPEED):
+def swap_tiles(game: Game, pos1: tuple[int, int], pos2: tuple[int, int], animation_speed: float):
 	board = game.board
 	# add new animation
 	tile1 = board[pos1[0]][pos1[1]]
 	tile2 = board[pos2[0]][pos2[1]]
 	game.no_draw.add(pos2)
-	anim = Animation(tile1 if tile1 else None, (pos1[0], pos1[1], 0), (pos2[0], pos2[1], 0))
+	anim = TileAnimation(tile1 if tile1 else None, (pos1[0], pos1[1], 0), (pos2[0], pos2[1], 0))
 	anim.on_finish = lambda: game.no_draw.remove(pos2) if pos2 in game.no_draw else print(f"tried to remove {pos2}")
 	if animation_speed:
 		anim.speed = animation_speed
-	game.animations.append(anim)
+	game.add_anim(anim)
 	game.no_draw.add(pos1)
-	anim2 = Animation(tile2, (pos2[0], pos2[1], 0), (pos1[0], pos1[1], 0))
+	anim2 = TileAnimation(tile2, (pos2[0], pos2[1], 0), (pos1[0], pos1[1], 0))
 	anim2.on_finish = lambda: game.no_draw.remove(pos1) if pos1 in game.no_draw else print(f"tried to remove {pos1}")
 	if animation_speed:
 		anim2.speed = animation_speed
-	game.animations.append(anim2)
+	game.add_anim(anim2)
 	# swap places
 	board[pos1[0]][pos1[1]], board[pos2[0]][pos2[1]] = board[pos2[0]][pos2[1]], board[pos1[0]][pos1[1]]
 
@@ -70,12 +71,11 @@ def main(game: Game):
 	level_sel.init()
 
 	arrow_back = image.load_image("arrow_back", (30, 30))
-	game.ui_objects.append(UIObject(arrow_back, pygame.Rect(15, 5, 30, 30), on_click=lambda: game.set_state(
-		GameState.LEVEL_SELECTION)))
-	score_label = UILabel("SCORE", pygame.font.Font(None, 36), (255, 255, 255), (WINDOW_WIDTH // 2, 80),
+	game.ui_objects.append(UIObject(arrow_back, pygame.Rect(15, 5, 30, 30), on_click=lambda: game.end_level()))
+	score_label = UILabel("SCORE", game.game_fonts.title_font, (255, 255, 255), (WINDOW_WIDTH // 2, 80),
 						  ident="score_label")
 	game.ui_objects.append(score_label)
-	turns_label = UILabel("TURNS", pygame.font.Font(None, 36), (255, 255, 255), (WINDOW_WIDTH // 2, 55),
+	turns_label = UILabel("TURNS", game.game_fonts.title_font, (255, 255, 255), (WINDOW_WIDTH // 2, 55),
 						  ident="turns_label")
 	game.ui_objects.append(turns_label)
 
@@ -129,7 +129,7 @@ def draw_in_game(game: Game):
 				game.input_locked = False
 	game.screen.fill((0, 0, 0))
 	draw.draw_board(game)
-	draw.run_animations(game)
+	run_animations(game)
 	pygame.draw.rect(game.screen, (97, 125, 117), (0, 0, WINDOW_WIDTH, 40))
 	draw_ingame_ui(game)
 	process_combinations(game)
@@ -164,28 +164,30 @@ def check_win(game):
 		game.winning_condition = lambda g: False
 		game.input_locked = True
 		game.lock_timeout = False
+		game.ANIM_SPEED_MULT = 2.5
 		sizes = (1.5, 2.5, 3.5, 4.5)
 		for size in sizes:
-			for anim in create_circle_effect((200, 25, 40), (4, 4), size, 80):
-				anim.delay = size * 0.5 - 0.75
-				game.animations.append(anim)
+			for anim in create_circle_effect(game, (200, 25, 40), (4, 4), size, 80, game.ANIMATION_SPEED / game.ANIM_SPEED_MULT):
+				anim.delay = (size * 0.5 - 0.75)
+				game.add_anim(anim)
 
 		# destroy tiles for remaining steps
-		def destroy_remaining_tile(previous: Animation = None):
+		def destroy_remaining_tile(previous: TileAnimation = None):
 			if game.steps_left <= 0:
 				return
 			# game.steps_left -= 1
 			pos = game.pick_random_tile()
 			tile = game.board[pos[0]][pos[1]]
-			dest = Animation()
+			dest = TileAnimation(speed=game.ANIMATION_SPEED)
 			if previous is not None:
 				dest.starting_condition = lambda game=game, ani=previous: (
-							ani not in game.animations and len(game.no_draw) <= 1)
+						ani not in game.animations and len(game.no_draw) <= 1)
 			dest.delay = 0.2
 			dest.on_start = lambda game=game, pos=pos, tile=tile: (game.add_score(5), game.dec_steps(), game.no_draw.add(pos),
-																   play_block_break(game, tile.color, pos))
+				play_block_break(game, tile.color, pos))
 			dest.on_finish = lambda game=game, pos=pos, p=dest: (destroy_remaining_tile(p), remove_tile(game, pos))
-			game.animations.append(dest)
+			game.add_anim(dest)
+
 		destroy_remaining_tile()
 
 
@@ -200,7 +202,7 @@ def tile_gravity(game: Game):
 				if j > 0:
 					falls.append(((i, j), (i, j - 1)))
 	for refill in falls:
-		swap_tiles(game, refill[0], refill[1], FALL_SPEED)
+		swap_tiles(game, refill[0], refill[1], game.FALL_SPEED * game.ANIM_SPEED_MULT)
 
 
 def refill_tiles(game: Game):
@@ -215,11 +217,11 @@ def refill_tiles(game: Game):
 		for i in range(GRID_SIZE):
 			if game.board[i][0] is None:
 				col = random.choice(COLORS)
-				anim = Animation(Tile(col), (i, -1, 180, 0), (i, 0, 0, 1))
+				anim = TileAnimation(Tile(col), (i, -1, 180, 0), (i, 0, 0, 1), speed=game.ANIMATION_SPEED)
 				anim.on_finish = \
 					lambda i=i: game.no_draw.remove((i, 0)) if (i, 0) in game.no_draw else print(
 						f"tried to remove {(i, 0)}")
-				game.animations.append(anim)
+				game.add_anim(anim)
 				game.board[i][0] = Tile(col)
 				game.no_draw.add((i, 0))
 
@@ -233,10 +235,10 @@ def process_combinations(game: Game):
 			start = (block[0] + 0.5, block[1] + 0.5, 0, 0)
 			end = (block[0] + 0.5, block[1] + 0.5, 180, 0)
 			tile = game.board[block[0]][block[1]]
-			anim = Animation(tile, start, end)
+			anim = TileAnimation(tile, start, end)
 			anim.on_finish = lambda bl=block: remove_tile(game, bl)
 			game.no_draw.add(block)
-			game.animations.append(anim)
+			game.add_anim(anim)
 			play_block_break(game, tile.color, block)
 		game.chain_size += 1
 		x_total = 0
@@ -260,6 +262,10 @@ def process_combinations(game: Game):
 			play_bonus_point_effect(game, (min(255, 60 * game.chain_size), 25, 25), (center_x, center_y),
 									0.4 * game.chain_size,
 									game.chain_size)
+		if len(comb) > 3 or game.chain_size >= 2:
+			text_intensity = min(9, max(0, (len(comb) - 3) * 3 + game.chain_size - 1 + random.randint(-2, 2)))
+			play_shout_popup_effect(game, (255, 0, 0), (center_x, center_y), text_intensity / 5,
+									strings.SHOUTOUTS[text_intensity])
 
 
 def swap_drag(event, game):
@@ -298,7 +304,7 @@ def swap_drag(event, game):
 				if (not tile1 or tile1.can_be_moved()) and (not tile2 or tile2.can_be_moved()):
 					if game.steps_left > 0:
 						game.steps_left -= 1
-						swap_tiles(game, game.first_tile, (grid_x, grid_y))
+						swap_tiles(game, game.first_tile, (grid_x, grid_y), game.ANIMATION_SPEED)
 				game.chain_size = 0
 			game.first_tile = None
 

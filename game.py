@@ -1,19 +1,16 @@
+from __future__ import annotations
+
 import enum
 import random
 from typing import Callable
 
 from pygame import Surface
 
+from visual import animation
+from consts import GRID_SIZE
 from tile import Tile, COLORS
 from ui_object import UIObject
-from visual.animation import Animation
 from visual.text import GameFonts
-
-GRID_SIZE = 9
-TILE_SIZE = 64
-WINDOW_WIDTH = GRID_SIZE * TILE_SIZE
-WINDOW_HEIGHT = GRID_SIZE * TILE_SIZE + 150
-BOARD_OFFSET = (0, 150)
 
 
 def create_board():
@@ -28,10 +25,20 @@ class GameState(enum.Enum):
 
 
 class Game:
+
+	def set_animation_speed(self, speed: float) -> None:
+		self._ANIMATION_SPEED = speed
+
+	_ANIMATION_SPEED = 2.5
+	ANIM_SPEED_MULT = 1
+	EXPLOSION_SPEED = 2
+	FALL_SPEED = 6.25
+	ANIMATION_SPEED = property(lambda self: self._ANIMATION_SPEED * self.ANIM_SPEED_MULT, set_animation_speed)
+
 	first_tile = None
 	board = create_board()
 	no_draw: set[tuple] = set()
-	animations: list[Animation]
+	animations: list[animation.TileAnimation]
 	FPS = 120
 	score = 0
 	steps_left = 0
@@ -45,7 +52,7 @@ class Game:
 	game_fonts: GameFonts
 
 	def __init__(self):
-		self.animations: list[Animation] = []
+		self.animations: list[animation.Animation] = []
 		self.ui_objects: list[UIObject] = []
 		self.winning_condition: Callable[[Game], bool] = lambda game: False
 
@@ -55,10 +62,11 @@ class Game:
 	def set_state(self, state: GameState):
 		self.current_state = state
 
-	def add_anim(self, anim: Animation):
+	def add_anim(self, anim: animation.Animation):
 		self.animations.append(anim)
+		self.animations.sort(key=lambda a: a.priority)
 
-	def remove_anim(self, anim: Animation):
+	def remove_anim(self, anim: animation.TileAnimation):
 		if anim in self.animations:
 			self.animations.remove(anim)
 
@@ -138,3 +146,41 @@ class Game:
 					combinations.append(list(set(combination).union(set(comb))))
 		combinations.sort(key=lambda x: len(x), reverse=True)
 		return combinations
+
+	def end_level(self):
+		self.set_state(GameState.LEVEL_SELECTION)
+		self.no_draw.clear()
+		self.animations.clear()
+		self.ANIM_SPEED_MULT = 1
+
+
+def run_animations(game: Game):
+	for anim in game.animations.copy():
+		if anim.starting_condition and not anim.starting_condition():
+			continue
+		if anim.delay > 0:
+			anim.delay -= (1 / game.FPS)
+			continue
+		if anim.progress == 0:
+			if anim.on_start:
+				anim.on_start()
+		x0, y0, angle0, size0 = anim.start
+		x1, y1, angle1, size1 = anim.curr
+		x2, y2, angle2, size2 = anim.end
+		anim.draw(game.screen)
+		# go from curr towards end
+		# dx, dy = x2 - x1, y2 - y1
+		# direction: tuple = dx / (dx ** 2 + dy ** 2) ** 0.5, dy / (dx ** 2 + dy ** 2) ** 0.5
+		x_diff_total = x2 - x0
+		y_diff_total = y2 - y0
+		angle_diff_total = angle2 - angle0
+		size_diff_total = size2 - size0
+		anim.curr = (
+			x0 + x_diff_total * anim.get_anim_type_progress(), y0 + y_diff_total * anim.get_anim_type_progress(),
+			angle0 + angle_diff_total * anim.get_anim_type_progress(),
+			size0 + size_diff_total * anim.get_anim_type_progress())
+		if anim.progress >= 1:
+			if anim.on_finish:
+				anim.on_finish()
+			game.animations.remove(anim)
+		anim.progress += anim.speed * (1 / game.FPS)

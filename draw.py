@@ -1,7 +1,7 @@
 import pygame
-from pygame import Surface, Rect
+from pygame import Surface
 
-from game import GRID_SIZE, BOARD_OFFSET, TILE_SIZE, Game
+from consts import GRID_SIZE, TILE_SIZE, BOARD_OFFSET
 from tile import TileAddon
 
 
@@ -38,42 +38,3 @@ def draw_board(game):
 								  (i + 0.5) * TILE_SIZE + BOARD_OFFSET[0], (j + 0.5) * TILE_SIZE + BOARD_OFFSET[1]),
 								  TILE_SIZE,
 								  TILE_SIZE, 0, 200)
-
-
-def run_animations(game: Game):
-	for anim in game.animations.copy():
-		if anim.starting_condition and not anim.starting_condition():
-			continue
-		if anim.delay > 0:
-			anim.delay -= (1 / game.FPS)
-			continue
-		if anim.progress == 0:
-			if anim.on_start:
-				anim.on_start()
-		x0, y0, angle0, size0 = anim.start
-		x1, y1, angle1, size1 = anim.curr
-		x2, y2, angle2, size2 = anim.end
-		if anim.tile:
-			draw_rotated_rect(game.screen, anim.tile.color,
-								  ((x1 + 0.5) * TILE_SIZE + BOARD_OFFSET[0], (y1 + 0.5) * TILE_SIZE + BOARD_OFFSET[1]),
-								  TILE_SIZE * size1, TILE_SIZE * size1, angle1)
-			if anim.tile.addon == TileAddon.BLOCKER:
-				draw_rotated_rect(game.screen, (0, 0, 0),
-								  ((x1 + 0.5) * TILE_SIZE + BOARD_OFFSET[0], (y1 + 0.5) * TILE_SIZE + BOARD_OFFSET[1]),
-								  TILE_SIZE * size1, TILE_SIZE * size1, angle1, 200)
-		# go from curr towards end
-		# dx, dy = x2 - x1, y2 - y1
-		# direction: tuple = dx / (dx ** 2 + dy ** 2) ** 0.5, dy / (dx ** 2 + dy ** 2) ** 0.5
-		x_diff_total = x2 - x0
-		y_diff_total = y2 - y0
-		angle_diff_total = angle2 - angle0
-		size_diff_total = size2 - size0
-		anim.curr = (
-			x0 + x_diff_total * anim.get_anim_type_progress(), y0 + y_diff_total * anim.get_anim_type_progress(),
-			angle0 + angle_diff_total * anim.get_anim_type_progress(),
-			size0 + size_diff_total * anim.get_anim_type_progress())
-		if anim.progress >= 1:
-			if anim.on_finish:
-				anim.on_finish()
-			game.animations.remove(anim)
-		anim.progress += anim.speed * (1 / game.FPS)
