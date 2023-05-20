@@ -1,25 +1,25 @@
 from typing import Callable
 
 import tile
-from game import Game
-from consts import GRID_SIZE
+from pygame_imp.game import PgGame
+from universal.consts import GRID_SIZE
 from tile import Tile
-import game as ga
+from pygame_imp import game as ga
 
 
 class Level:
 	special_blocks: list[tuple[int, int, Tile]]
 	max_steps: int
-	winning_condition: Callable[[Game], bool]
+	winning_condition: Callable[[PgGame], bool]
 
 	def __init__(self, special_blocks: list[tuple[int, int, Tile]], max_steps: int = 10,
-				 winning_condition: Callable[[Game], bool] = None):
+				 winning_condition: Callable[[PgGame], bool] = None):
 		self.special_blocks: list[tuple[int, int, Tile]] = special_blocks
 		self.max_steps: int = max_steps
-		self.winning_condition: Callable[[Game], bool] = winning_condition
+		self.winning_condition: Callable[[PgGame], bool] = winning_condition
 
 
-def all_blockers_at_bottom(game: Game) -> bool:
+def all_blockers_at_bottom(game: PgGame) -> bool:
 	for x in range(GRID_SIZE):
 		for y in range(GRID_SIZE):
 			if not game.board[x][y]:
@@ -39,7 +39,7 @@ level_two = Level([], 15, lambda game: (game.score > 0))
 LEVELS: list[Level] = [level_one, level_two]
 
 
-def load_level(game: Game, level: Level):
+def load_level(game: PgGame, level: Level):
 	print("Loading level...")
 	game.board = ga.create_board()
 	game.remove_combinations()

@@ -1,4 +1,6 @@
 pip==23.1.2
 pygame==2.4.0
-setuptools==67.7.2
+setuptools==67.8.0
 wheel==0.40.0
+
+Kivy~=2.1.0

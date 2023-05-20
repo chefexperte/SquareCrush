@@ -4,13 +4,12 @@ import enum
 import random
 from typing import Callable
 
-from pygame import Surface
 
-from visual import animation
-from consts import GRID_SIZE
+from universal.consts import GRID_SIZE
 from tile import Tile, COLORS
-from ui_object import UIObject
-from visual.text import GameFonts
+from universal.ui_object import UIObject
+from universal.visual import animation
+from universal.wrapper import SQDrawable
 
 
 def create_board():
@@ -35,7 +34,7 @@ class Game:
 	FALL_SPEED = 6.25
 	ANIMATION_SPEED = property(lambda self: self._ANIMATION_SPEED * self.ANIM_SPEED_MULT, set_animation_speed)
 
-	first_tile = None
+	first_tile: tuple[int, int] = None
 	board = create_board()
 	no_draw: set[tuple] = set()
 	animations: list[animation.TileAnimation]
@@ -45,11 +44,11 @@ class Game:
 	input_locked: bool = False
 	lock_timeout: int = 0
 	current_state = GameState.MAIN_MENU
-	screen: Surface
+	screen: SQDrawable
 	mouse_pos: tuple[float, float]
 	chain_size: int = 0
 	ui_objects: list[UIObject]
-	game_fonts: GameFonts
+	# game_fonts: GameFonts
 
 	def __init__(self):
 		self.animations: list[animation.Animation] = []
@@ -169,8 +168,6 @@ def run_animations(game: Game):
 		x2, y2, angle2, size2 = anim.end
 		anim.draw(game.screen)
 		# go from curr towards end
-		# dx, dy = x2 - x1, y2 - y1
-		# direction: tuple = dx / (dx ** 2 + dy ** 2) ** 0.5, dy / (dx ** 2 + dy ** 2) ** 0.5
 		x_diff_total = x2 - x0
 		y_diff_total = y2 - y0
 		angle_diff_total = angle2 - angle0

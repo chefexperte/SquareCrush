@@ -40,5 +40,5 @@ class Tile:
 	def can_combine(self):
 		return self.addon != TileAddon.BLOCKER
 
-	def can_be_moved(self):
+	def can_be_moved(self) -> bool:
 		return self.addon not in [TileAddon.BLOCKER, TileAddon.LOCKED, TileAddon.FROZEN]

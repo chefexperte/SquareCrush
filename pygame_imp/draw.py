@@ -1,7 +1,7 @@
 import pygame
 from pygame import Surface
 
-from consts import GRID_SIZE, TILE_SIZE, BOARD_OFFSET
+from universal.consts import GRID_SIZE, TILE_SIZE, BOARD_OFFSET
 from tile import TileAddon
 
 

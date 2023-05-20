@@ -1,2 +1,4 @@
 .idea/
 venv/
+kivy/.buildozer
+.buildozer/

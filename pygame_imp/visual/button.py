@@ -4,7 +4,7 @@ import pygame
 from pygame import Rect, Surface
 from pygame.font import Font
 
-from draw import draw_rotated_rect
+from pygame_imp.draw import draw_rotated_rect
 
 
 class Button:

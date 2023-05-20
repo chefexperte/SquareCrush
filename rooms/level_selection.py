@@ -2,19 +2,18 @@ import pygame
 from pygame import Rect
 
 import levels.levels
-from game import Game, GameState
-from consts import WINDOW_WIDTH
-from visual.button import Button
-from visual.text import GameFonts
+from pygame_imp.game import PgGame, GameState
+from universal.consts import WINDOW_WIDTH
+from pygame_imp.visual.button import Button
 
 
 class LevelSelection:
-	game: Game
+	game: PgGame
 	buttons: list[Button] = []
 
-	def __init__(self, game: Game):
+	def __init__(self, game: PgGame):
 		self.buttons: list[Button] = []
-		self.game: Game = game
+		self.game: PgGame = game
 
 	def init(self):
 		spacing = 25
@@ -43,7 +42,7 @@ class LevelSelection:
 		pygame.display.flip()
 
 
-def level_selection_events(event, game: Game, level_sel: LevelSelection):
+def level_selection_events(event, game: PgGame, level_sel: LevelSelection):
 	if event.type == pygame.MOUSEBUTTONDOWN:
 		if event.button == 1:  # Left mouse button
 			for button in level_sel.buttons:
