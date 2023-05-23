@@ -3,7 +3,7 @@ import random
 from kivy import platform
 from kivy.app import App
 from kivy.core.window import Window
-from kivy.graphics import Rectangle, Color
+from kivy.graphics import Rectangle, Color, Ellipse
 from kivy.input.providers.mouse import MouseMotionEvent
 from kivy.uix.widget import Widget
 
@@ -19,6 +19,30 @@ TILE_SIZE = WINDOW_WIDTH / GRID_SIZE_X
 
 def scale_color(color: tuple[float, float, float]) -> tuple[float, float, float]:
     return color[0] / 255, color[1] / 255, color[2] / 255
+
+
+class TouchPoint(Widget):
+    def __init__(self, **kwargs):
+        super(TouchPoint, self).__init__(**kwargs)
+
+        with self.canvas:
+            Color(1, 0, 0, 0.5)
+            self.rect = Ellipse(pos=self.pos, size=self.size)
+            self.size = (25, 25)
+            self.pos = (0, 0)
+        self.bind(pos=self.update_rect, size=self.update_rect)
+
+    def update_rect(self, *args):
+        self.canvas.clear()
+        with self.canvas:
+            Color(1, 0, 0, 1)
+            self.rect = Ellipse(pos=self.pos, size=self.size)
+
+    def on_size(self, *args):
+        self.rect.size = self.size
+
+    def on_pos(self, *args):
+        self.rect.pos = self.pos
 
 
 class SQTile(Widget):
@@ -69,8 +93,13 @@ class SquareCrush(Widget):
                 self.grid[i][j] = sqt
                 self.add_widget(sqt)
 
+        self.touch_point = TouchPoint()
+        self.add_widget(self.touch_point)
+
+    def on_touch_move(self, touch: MouseMotionEvent):
+        self.touch_point.pos = (touch.pos[i] - self.touch_point.size[i] / 2 for i in range(2))
+
     def on_touch_down(self, touch: MouseMotionEvent):
-        print(touch.button)
         if touch.button == 'left' or platform == 'android':
             # old code
             mouse_x, mouse_y = touch.pos
@@ -84,6 +113,11 @@ class SquareCrush(Widget):
             if self.game.first_tile is not None:
                 mouse_x, mouse_y = touch.pos
                 grid_x, grid_y = mouse_x // TILE_SIZE, mouse_y // TILE_SIZE
+                if grid_x >= GRID_SIZE_X or grid_y >= GRID_SIZE_Y or grid_x < 0 or grid_y < 0:
+                    return
+                if self.game.first_tile[0] >= GRID_SIZE_X or self.game.first_tile[1] >= GRID_SIZE_Y or \
+                        self.game.first_tile[0] < 0 or self.game.first_tile[1] < 0:
+                    return
                 if grid_x == self.game.first_tile[0] and grid_y == self.game.first_tile[1]:
                     return
                 xdiff = grid_x - self.game.first_tile[0]
