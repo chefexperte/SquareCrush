@@ -22,9 +22,10 @@ class Level:
 def all_blockers_at_bottom(game: Game) -> bool:
 	for x in range(GRID_SIZE):
 		for y in range(GRID_SIZE):
-			if not game.board[x][y]:
+			t: Tile = game.board[x][y]
+			if not t:
 				continue
-			if game.board[x][y].addon == tile.TileAddon.BLOCKER and y != GRID_SIZE - 1:
+			if t.addon == tile.TileAddon.BLOCKER and y != GRID_SIZE - 1:
 				return False
 	return True
 

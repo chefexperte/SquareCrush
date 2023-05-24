@@ -4,9 +4,9 @@ from typing import Callable
 
 import pygame
 
-import game
 from consts import TILE_SIZE, BOARD_OFFSET
 from draw import draw_rotated_rect
+from util.game_color import GameColor, GameColors
 from tile import Tile, TileAddon
 
 
@@ -14,21 +14,28 @@ def tile_to_real_pos(pos: tuple[float, float]) -> tuple[float, float]:
 	return (pos[0] + 0.5) * TILE_SIZE + BOARD_OFFSET[0], (pos[1] + 0.5) * TILE_SIZE + BOARD_OFFSET[1]
 
 
+class AnimationCheckpoint:
+	pos: tuple[float, float]
+	angle: float
+	size: float
+	color: GameColor
+
+	def __init__(self, pos: tuple[float, float], color: GameColor = GameColor(), angle: float = 0,
+				 size: float = 1):
+		self.pos = pos
+		self.angle = angle
+		self.size = size
+		self.color = color
+
+
 class Animation:
-	def __init__(self, surface: pygame.Surface, color: tuple[int, int, int] = (255, 255, 255), start: tuple = (-1, -1),
-				 end: tuple = (-1, -1), anim_type: str = "lin", speed: float = 2.5, delay: float = 0,
+	def __init__(self, surface: pygame.Surface,
+				 start: AnimationCheckpoint = AnimationCheckpoint((0, 0), GameColors.INV),
+				 end: AnimationCheckpoint = AnimationCheckpoint((0, 0), GameColors.INV), anim_type: str = "lin",
+				 speed: float = 2.5, delay: float = 0,
 				 priority: int = 0):
 		self.delay = delay
 		self.surface = surface
-		self.color = color
-		if len(start) != len(end):
-			raise ValueError("Start and end tuples have to be the same length")
-		if len(start) == 2:
-			start = start + (0,)
-			end = end + (0,)
-		if len(start) == 3:
-			start = start + (1,)
-			end = end + (1,)
 		self.start = start
 		self.end = end
 		self.curr = start
@@ -38,11 +45,9 @@ class Animation:
 
 	progress: float = 0
 	surface: pygame.Surface = None
-	color: tuple[int, int, int] = None
-	# x, y, rot, size
-	start: tuple[float, float, float, float] = None
-	curr: tuple[float, float, float, float] = None
-	end: tuple[float, float, float, float] = None
+	start: AnimationCheckpoint = None
+	curr: AnimationCheckpoint = None
+	end: AnimationCheckpoint = None
 	anim_type: str = "lin"
 	on_finish: Callable = None
 	on_start: Callable = None
@@ -61,15 +66,13 @@ class Animation:
 		return self.progress
 
 	def draw(self, screen: pygame.Surface):
-		x0, y0, angle0, size0 = self.start
-		x1, y1, angle1, size1 = self.curr
-		x2, y2, angle2, size2 = self.end
+		pos, angle1, size1 = self.curr.pos, self.curr.angle, self.curr.size
 		rect_surface = self.surface.copy()
 
 		# Rechteck um den Winkel drehen
 		rotated_surface = pygame.transform.rotate(rect_surface, angle1)
-		rotated_rect = rotated_surface.get_rect(center=tile_to_real_pos((x1, y1)))
-		rotated_rect.scale_by(size1)
+		rotated_rect = rotated_surface.get_rect(center=tile_to_real_pos(pos))
+		rotated_rect.scale_by(size1, size1)
 
 		# Rotiertes Rechteck auf dem Bildschirm anzeigen
 		# game.screen.blit(rotated_surface, rotated_rect)
@@ -77,25 +80,22 @@ class Animation:
 
 
 class TileAnimation(Animation):
-	def __init__(self, tile: Tile = Tile((0, 0, 0)), start: tuple = (-1, -1),
-				 end: tuple = (-1, -1), anim_type: str = "lin", speed: float = 2.5, delay: float = 0):
+	def __init__(self, tile: Tile | None = Tile(GameColor()),
+				 start: AnimationCheckpoint = AnimationCheckpoint((0, 0), GameColors.INV),
+				 end: AnimationCheckpoint = AnimationCheckpoint((0, 0), GameColors.INV), anim_type: str = "lin",
+				 speed: float = 2.5, delay: float = 0):
 		self.tile = tile
 		surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-		color = tile.color if tile else None
-		if len(start) != len(end):
-			raise ValueError("Start and end tuples have to be the same length")
-		super().__init__(surface, color, start, end, anim_type, speed, delay)
+		# color = tile.color if tile else None
+		super().__init__(surface, start, end, anim_type, speed, delay)
 
 	tile: Tile = None
 
 	def draw(self, screen: pygame.Surface):
-		x0, y0, angle0, size0 = self.start
-		x1, y1, angle1, size1 = self.curr
-		x2, y2, angle2, size2 = self.end
+		size = self.curr.size
 		if self.tile:
-			draw_rotated_rect(screen, self.tile.color, tile_to_real_pos((x1, y1)),
-								  TILE_SIZE * size1, TILE_SIZE * size1, angle1)
+			draw_rotated_rect(screen, self.curr.color, tile_to_real_pos(self.curr.pos),
+							  TILE_SIZE * size, TILE_SIZE * size, self.curr.angle)
 			if self.tile.addon == TileAddon.BLOCKER:
-				draw_rotated_rect(screen, (0, 0, 0), tile_to_real_pos((x1, y1)),
-								  TILE_SIZE * size1, TILE_SIZE * size1, angle1, 200)
-
+				draw_rotated_rect(screen, GameColor(0, 0, 0, 150), tile_to_real_pos(self.curr.pos),
+								  TILE_SIZE * size, TILE_SIZE * size, self.curr.angle)

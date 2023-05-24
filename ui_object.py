@@ -2,6 +2,8 @@ from typing import Callable
 
 import pygame
 
+from util.game_color import GameColor
+
 
 class UIObject:
 
@@ -11,8 +13,8 @@ class UIObject:
 	surface: pygame.Surface
 	hovering: bool = False
 
-	def __init__(self, surface: pygame.Surface = None, hitbox: pygame.Rect = None, on_hover: Callable = None,
-				 on_click: Callable = None, ident: str = None):
+	def __init__(self, surface: pygame.Surface | None = None, hitbox: pygame.Rect | None = None, on_hover: Callable | None = None,
+				 on_click: Callable | None = None, ident: str | None = None):
 		self.on_hover: Callable[[bool], None] = on_hover
 		self.on_click: Callable = on_click
 		self.hitbox: pygame.Rect = hitbox
@@ -39,10 +41,10 @@ class UILabel(UIObject):
 
 	_text: str
 	font: pygame.font.Font
-	color: tuple[int, int, int]
+	color: GameColor
 
-	def __init__(self, text: str, font: pygame.font.Font, color: tuple[int, int, int], pos: tuple[float, float],
-				 on_hover: Callable = None, on_click: Callable = None, ident: str = None):
+	def __init__(self, text: str, font: pygame.font.Font, color: GameColor, pos: tuple[float, float],
+				 on_hover: Callable | None = None, on_click: Callable | None = None, ident: str | None = None):
 		self.font = font
 		self.color = color
 		self.pos = pos
@@ -52,7 +54,7 @@ class UILabel(UIObject):
 
 	def set_text(self, text: str) -> None:
 		self._text = text
-		self.surface = self.font.render(self.text, True, self.color)
+		self.surface = self.font.render(self.text, True, self.color.to_tuple())
 		self.hitbox = pygame.Rect(self.pos, self.surface.get_size())
 
 	def draw(self, screen: pygame.Surface) -> None:

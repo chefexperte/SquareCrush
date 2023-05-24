@@ -8,13 +8,14 @@ from pygame import Surface
 
 from visual import animation
 from consts import GRID_SIZE
-from tile import Tile, COLORS
+from tile import Tile, TileColor
 from ui_object import UIObject
+from visual.animation import AnimationCheckpoint
 from visual.text import GameFonts
 
 
-def create_board():
-	return [[Tile(random.choice(COLORS)) for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+def create_board() -> list[list[Tile]]:
+	return [[Tile(random.choice(list(TileColor)).value) for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
 
 
 class GameState(enum.Enum):
@@ -36,7 +37,7 @@ class Game:
 	ANIMATION_SPEED = property(lambda self: self._ANIMATION_SPEED * self.ANIM_SPEED_MULT, set_animation_speed)
 
 	first_tile = None
-	board = create_board()
+	board: list[list[Tile | None]] = create_board()
 	no_draw: set[tuple] = set()
 	animations: list[animation.TileAnimation]
 	FPS = 120
@@ -86,7 +87,7 @@ class Game:
 		while len(combs) > 0:
 			combs = self.find_combinations()
 			for comb in combs:
-				self.board[comb[1][0]][comb[1][1]].color = random.choice(COLORS)
+				self.board[comb[1][0]][comb[1][1]].color = random.choice(list(TileColor)).value
 
 	def find_combinations(self):
 		combinations = []
@@ -164,19 +165,19 @@ def run_animations(game: Game):
 		if anim.progress == 0:
 			if anim.on_start:
 				anim.on_start()
-		x0, y0, angle0, size0 = anim.start
-		x1, y1, angle1, size1 = anim.curr
-		x2, y2, angle2, size2 = anim.end
+		x0, y0, angle0, size0 = anim.start.pos[0], anim.start.pos[1], anim.start.angle, anim.start.size
+		x2, y2, angle2, size2 = anim.end.pos[0], anim.end.pos[1], anim.end.angle, anim.end.size
 		anim.draw(game.screen)
 		# go from curr towards end
-		# dx, dy = x2 - x1, y2 - y1
-		# direction: tuple = dx / (dx ** 2 + dy ** 2) ** 0.5, dy / (dx ** 2 + dy ** 2) ** 0.5
 		x_diff_total = x2 - x0
 		y_diff_total = y2 - y0
 		angle_diff_total = angle2 - angle0
 		size_diff_total = size2 - size0
-		anim.curr = (
-			x0 + x_diff_total * anim.get_anim_type_progress(), y0 + y_diff_total * anim.get_anim_type_progress(),
+		# subtract the tuples to get the difference between the two points
+		new_col = anim.start.color
+		anim.curr = AnimationCheckpoint(
+			(x0 + x_diff_total * anim.get_anim_type_progress(), y0 + y_diff_total * anim.get_anim_type_progress()),
+			new_col,
 			angle0 + angle_diff_total * anim.get_anim_type_progress(),
 			size0 + size_diff_total * anim.get_anim_type_progress())
 		if anim.progress >= 1:

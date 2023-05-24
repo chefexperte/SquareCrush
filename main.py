@@ -6,32 +6,39 @@ import pygame
 
 import draw
 import strings
-from game import COLORS, Game, GameState, run_animations
+from game import Game, GameState, run_animations
 from consts import GRID_SIZE, TILE_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT, BOARD_OFFSET
 from rooms import main_menu as mm, level_selection
 from rooms.level_selection import level_selection_events
 from rooms.main_menu import main_menu_events
-from tile import Tile
+from tile import Tile, TileColor
 from ui_object import UIObject, UILabel, REGISTRY
+from util.game_color import GameColor, GameColors
 from visual import image
-from visual.animation import TileAnimation
+from visual.animation import TileAnimation, AnimationCheckpoint
 from visual.effect import play_bonus_point_effect, play_block_break, create_circle_effect, play_shout_popup_effect
 from visual.text import GameFonts
 
 
-def swap_tiles(game: Game, pos1: tuple[int, int], pos2: tuple[int, int], animation_speed: float):
+def swap_tiles(game: Game, pos1: tuple[int, int], pos2: tuple[int, int], animation_speed: float | None):
 	board = game.board
 	# add new animation
 	tile1 = board[pos1[0]][pos1[1]]
 	tile2 = board[pos2[0]][pos2[1]]
 	game.no_draw.add(pos2)
-	anim = TileAnimation(tile1 if tile1 else None, (pos1[0], pos1[1], 0), (pos2[0], pos2[1], 0))
+	if tile1:
+		anim = TileAnimation(tile1, AnimationCheckpoint(pos1, tile1.color), AnimationCheckpoint(pos2, tile1.color))
+	else:
+		anim = TileAnimation(None, AnimationCheckpoint(pos1), AnimationCheckpoint(pos2))
 	anim.on_finish = lambda: game.no_draw.remove(pos2) if pos2 in game.no_draw else print(f"tried to remove {pos2}")
 	if animation_speed:
 		anim.speed = animation_speed
 	game.add_anim(anim)
 	game.no_draw.add(pos1)
-	anim2 = TileAnimation(tile2, (pos2[0], pos2[1], 0), (pos1[0], pos1[1], 0))
+	if tile2:
+		anim2 = TileAnimation(tile2, AnimationCheckpoint(pos2, tile2.color), AnimationCheckpoint(pos1, tile2.color))
+	else:
+		anim2 = TileAnimation(None, AnimationCheckpoint(pos2), AnimationCheckpoint(pos1))
 	anim2.on_finish = lambda: game.no_draw.remove(pos1) if pos1 in game.no_draw else print(f"tried to remove {pos1}")
 	if animation_speed:
 		anim2.speed = animation_speed
@@ -72,10 +79,10 @@ def main(game: Game):
 
 	arrow_back = image.load_image("arrow_back", (30, 30))
 	game.ui_objects.append(UIObject(arrow_back, pygame.Rect(15, 5, 30, 30), on_click=lambda: game.end_level()))
-	score_label = UILabel("SCORE", game.game_fonts.title_font, (255, 255, 255), (WINDOW_WIDTH // 2, 80),
+	score_label = UILabel("SCORE", game.game_fonts.title_font, GameColor(), (WINDOW_WIDTH // 2, 80),
 						  ident="score_label")
 	game.ui_objects.append(score_label)
-	turns_label = UILabel("TURNS", game.game_fonts.title_font, (255, 255, 255), (WINDOW_WIDTH // 2, 55),
+	turns_label = UILabel("TURNS", game.game_fonts.title_font, GameColor(), (WINDOW_WIDTH // 2, 55),
 						  ident="turns_label")
 	game.ui_objects.append(turns_label)
 
@@ -128,24 +135,24 @@ def draw_in_game(game: Game):
 				# lock_timeout = 0
 				game.input_locked = False
 	game.screen.fill((0, 0, 0))
-	draw.draw_board(game)
-	run_animations(game)
-	pygame.draw.rect(game.screen, (97, 125, 117), (0, 0, WINDOW_WIDTH, 40))
-	draw_ingame_ui(game)
-	process_combinations(game)
-	tile_gravity(game)
-	refill_tiles(game)
-	check_win(game)
+	draw.draw_board(game)  # draw the board
+	run_animations(game)  # update the animations
+	pygame.draw.rect(game.screen, (97, 125, 117), (0, 0, WINDOW_WIDTH, 40))  # draw the top bar
+	draw_ingame_ui(game)  # draw the ui
+	process_combinations(game)  # remove the tiles that are in combinations
+	tile_gravity(game)  # make the tiles fall down
+	refill_tiles(game)  # refill the board with new tiles if the number of tiles gets too low
+	check_win(game)  # check if the winning conditions are met and if so, end the level
 	label: UIObject = REGISTRY.get("score_label")
 	if label and type(label) == UILabel:
 		label.text = f"{strings.IN_GAME_SCORE}{game.score}"
-	label: UIObject = REGISTRY.get("turns_label")
-	if label and type(label) == UILabel:
-		label.text = f"{strings.IN_GAME_STEPS}{game.steps_left}"
+	label2: UIObject = REGISTRY.get("turns_label")
+	if label2 and type(label2) == UILabel:
+		label2.text = f"{strings.IN_GAME_STEPS}{game.steps_left}"
 	pygame.display.flip()
 
 
-def in_game_events(event: pygame.event, game: Game):
+def in_game_events(event: pygame.event.Event, game: Game):
 	game_rect = pygame.Rect(BOARD_OFFSET[0], BOARD_OFFSET[1], WINDOW_WIDTH, WINDOW_HEIGHT)
 	if not game.input_locked and game_rect.collidepoint(pygame.mouse.get_pos()):
 		swap_drag(event, game)
@@ -166,13 +173,16 @@ def check_win(game):
 		game.lock_timeout = False
 		game.ANIM_SPEED_MULT = 2.5
 		sizes = (1.5, 2.5, 3.5, 4.5)
+		last: TileAnimation
 		for size in sizes:
-			for anim in create_circle_effect(game, (200, 25, 40), (4, 4), size, 80, game.ANIMATION_SPEED / game.ANIM_SPEED_MULT):
+			for anim in create_circle_effect(game, GameColor(200, 25, 40), (4, 4), size, 80,
+											 game.ANIMATION_SPEED / game.ANIM_SPEED_MULT):
 				anim.delay = (size * 0.5 - 0.75)
 				game.add_anim(anim)
+				last = anim
 
 		# destroy tiles for remaining steps
-		def destroy_remaining_tile(previous: TileAnimation = None):
+		def destroy_remaining_tile(previous: TileAnimation | None = None):
 			if game.steps_left <= 0:
 				return
 			# game.steps_left -= 1
@@ -182,8 +192,11 @@ def check_win(game):
 			if previous is not None:
 				dest.starting_condition = lambda game=game, ani=previous: (
 						ani not in game.animations and len(game.no_draw) <= 1)
+			else:
+				dest.starting_condition = lambda game=game, ani=last: ani not in game.animations
 			dest.delay = 0.2
-			dest.on_start = lambda game=game, pos=pos, tile=tile: (game.add_score(5), game.dec_steps(), game.no_draw.add(pos),
+			dest.on_start = lambda game=game, pos=pos, tile=tile: (
+				game.add_score(5), game.dec_steps(), game.no_draw.add(pos),
 				play_block_break(game, tile.color, pos))
 			dest.on_finish = lambda game=game, pos=pos, p=dest: (destroy_remaining_tile(p), remove_tile(game, pos))
 			game.add_anim(dest)
@@ -210,14 +223,15 @@ def refill_tiles(game: Game):
 		return
 	empty_tiles = 0
 	for row in game.board:
-		for col in row:
-			if col is None:
+		for column in row:
+			if column is None:
 				empty_tiles += 1
 	if empty_tiles > 28:
 		for i in range(GRID_SIZE):
 			if game.board[i][0] is None:
-				col = random.choice(COLORS)
-				anim = TileAnimation(Tile(col), (i, -1, 180, 0), (i, 0, 0, 1), speed=game.ANIMATION_SPEED)
+				col: GameColor = random.choice(list(TileColor)).value
+				anim = TileAnimation(Tile(col), AnimationCheckpoint((i, -1), col, 180, 0),
+									 AnimationCheckpoint((i, 0), col, 0, 1), speed=game.ANIMATION_SPEED)
 				anim.on_finish = \
 					lambda i=i: game.no_draw.remove((i, 0)) if (i, 0) in game.no_draw else print(
 						f"tried to remove {(i, 0)}")
@@ -232,9 +246,10 @@ def process_combinations(game: Game):
 	if len(combs) > 0:
 		comb = combs[0]
 		for block in comb:
-			start = (block[0] + 0.5, block[1] + 0.5, 0, 0)
-			end = (block[0] + 0.5, block[1] + 0.5, 180, 0)
 			tile = game.board[block[0]][block[1]]
+			col = tile.color
+			start = AnimationCheckpoint((block[0] + 0.5, block[1] + 0.5), col, 0, 0)
+			end = AnimationCheckpoint((block[0] + 0.5, block[1] + 0.5), col, 180, 0)
 			anim = TileAnimation(tile, start, end)
 			anim.on_finish = lambda bl=block: remove_tile(game, bl)
 			game.no_draw.add(block)
@@ -250,7 +265,7 @@ def process_combinations(game: Game):
 		center_y = y_total / len(comb)
 		if len(comb) > 3:
 			color = game.board[comb[0][0]][comb[0][1]].color
-			color = (min(255, color[0] + 50), min(255, color[1] + 50), min(255, color[2] + 50))
+			color = GameColor(min(255, color.r + 50), min(255, color.g + 50), min(255, color.b + 50))
 			bonus = 1
 			match len(comb):
 				case 4:
@@ -259,12 +274,12 @@ def process_combinations(game: Game):
 					bonus = 5
 			play_bonus_point_effect(game, color, (center_x, center_y), 2, len(comb) + bonus)
 		if game.chain_size >= 2:
-			play_bonus_point_effect(game, (min(255, 60 * game.chain_size), 25, 25), (center_x, center_y),
+			play_bonus_point_effect(game, GameColor(min(255, 60 * game.chain_size), 25, 25), (center_x, center_y),
 									0.4 * game.chain_size,
 									game.chain_size)
 		if len(comb) > 3 or game.chain_size >= 2:
 			text_intensity = min(9, max(0, (len(comb) - 3) * 3 + game.chain_size - 1 + random.randint(-2, 2)))
-			play_shout_popup_effect(game, (255, 0, 0), (center_x, center_y), text_intensity / 5,
+			play_shout_popup_effect(game, GameColor(255, 0, 0), (center_x, center_y), text_intensity / 5,
 									strings.SHOUTOUTS[text_intensity])
 
 

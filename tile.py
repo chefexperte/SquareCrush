@@ -1,7 +1,9 @@
 # Farben
 import enum
 
-COLORS = [
+from util.game_color import GameColor
+
+COLORS_OLD = [
 	(153, 102, 255),  # purple
 	# (255, 127, 80),  # red
 	(255, 215, 0),  # yellow
@@ -15,11 +17,11 @@ COLORS = [
 
 
 class TileColor(enum.Enum):
-	PURPLE = (153, 102, 255)
-	YELLOW = (255, 215, 0)
-	PINK = (255, 182, 193)
-	GREEN = (84, 224, 168)
-	BLUE = (0, 191, 255)
+	PURPLE = GameColor(153, 102, 255)
+	YELLOW = GameColor(255, 215, 0)
+	PINK = GameColor(255, 182, 193)
+	GREEN = GameColor(84, 224, 168)
+	BLUE = GameColor(0, 191, 255)
 
 
 class TileAddon(enum.Enum):
@@ -33,8 +35,8 @@ class TileAddon(enum.Enum):
 class Tile:
 	addon: TileAddon
 
-	def __init__(self, color: tuple, addon: TileAddon = TileAddon.NONE):
-		self.color: tuple = color
+	def __init__(self, color: GameColor, addon: TileAddon = TileAddon.NONE):
+		self.color: GameColor = color
 		self.addon: TileAddon = addon
 
 	def can_combine(self):

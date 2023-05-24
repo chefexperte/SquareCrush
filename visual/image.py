@@ -3,7 +3,7 @@ import pygame
 _image_cache = {}
 
 
-def load_image(name: str, size: tuple[int, int] = None) -> pygame.Surface:
+def load_image(name: str, size: tuple[int, int] | None = None) -> pygame.Surface:
 	if name not in _image_cache:
 		_image_cache[name] = pygame.image.load(f"assets/{name}.png")
 	image = _image_cache[name]

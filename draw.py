@@ -2,15 +2,16 @@ import pygame
 from pygame import Surface
 
 from consts import GRID_SIZE, TILE_SIZE, BOARD_OFFSET
-from tile import TileAddon
+from util.game_color import GameColor
+from tile import TileAddon, Tile
 
 
-def draw_rotated_rect(screen: Surface, color: tuple[int, int, int], pos: tuple[float, float], width: float,
-					  height: float, angle: float, alpha: int = 255):
+def draw_rotated_rect(screen: Surface, color: GameColor, pos: tuple[float, float], width: float,
+					  height: float, angle: float):
 	# Rechteck erstellen
 	rect_surface = pygame.Surface((width, height), pygame.SRCALPHA)
 	try:
-		pygame.draw.rect(rect_surface, (*color, alpha), (0, 0, width, height))
+		pygame.draw.rect(rect_surface, color.to_tuple(), (0, 0, width, height))
 	except ValueError:
 		print(color)
 
@@ -27,14 +28,13 @@ def draw_board(game):
 		for j in range(GRID_SIZE):
 			# if game.no_draw and (i, j) in game.no_draw:
 			# 	pygame.draw.rect(screen, (150, 150, 150), (i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE), 0)
-			if (game.no_draw and (i, j) in game.no_draw) or not game.board[i][j]:
+			t: Tile = game.board[i][j]
+			if (game.no_draw and (i, j) in game.no_draw) or not t:
 				continue
-			pygame.draw.rect(game.screen, game.board[i][j].color,
+			pygame.draw.rect(game.screen, t.color.to_tuple(),
 							 (i * TILE_SIZE + BOARD_OFFSET[0], j * TILE_SIZE + BOARD_OFFSET[1],
 							  TILE_SIZE, TILE_SIZE), 0)
-			if game.board[i][j].addon and game.board[i][j].addon == TileAddon.BLOCKER:
-				draw_rotated_rect(game.screen, (0, 0, 0),
-								  (
-								  (i + 0.5) * TILE_SIZE + BOARD_OFFSET[0], (j + 0.5) * TILE_SIZE + BOARD_OFFSET[1]),
-								  TILE_SIZE,
-								  TILE_SIZE, 0, 200)
+			if t.addon and t.addon == TileAddon.BLOCKER:
+				draw_rotated_rect(game.screen, GameColor(0, 0, 0, 150),
+								  ((i + 0.5) * TILE_SIZE + BOARD_OFFSET[0], (j + 0.5) * TILE_SIZE + BOARD_OFFSET[1]),
+								  TILE_SIZE, TILE_SIZE, 0)

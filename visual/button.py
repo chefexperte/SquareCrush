@@ -5,6 +5,7 @@ from pygame import Rect, Surface
 from pygame.font import Font
 
 from draw import draw_rotated_rect
+from util.game_color import GameColor
 
 
 class Button:
@@ -25,7 +26,7 @@ class Button:
 		rect = self.rect
 		if hover:
 			rect = rect.scale_by(1.1, 1.1)
-		draw_rotated_rect(self.screen, (135, 85, 198), rect.center, rect.w, rect.h, 0)
+		draw_rotated_rect(self.screen, GameColor(135, 85, 198), rect.center, rect.w, rect.h, 0)
 		points = [rect.topleft, rect.topright, rect.bottomright, rect.bottomleft]
 		pygame.draw.lines(self.screen, (185, 85, 238), True, points, 4)
 		text_pos = (rect.centerx - self.label.get_width() // 2, rect.centery - self.label.get_height() // 2)
