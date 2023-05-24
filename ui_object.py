@@ -6,14 +6,14 @@ from util.game_color import GameColor
 
 
 class UIObject:
-
 	on_hover: Callable[[bool], None]
 	on_click: Callable
 	hitbox: pygame.Rect
 	surface: pygame.Surface
 	hovering: bool = False
 
-	def __init__(self, surface: pygame.Surface | None = None, hitbox: pygame.Rect | None = None, on_hover: Callable | None = None,
+	def __init__(self, surface: pygame.Surface | None = None, hitbox: pygame.Rect | None = None,
+				 on_hover: Callable[[bool], None] | None = None,
 				 on_click: Callable | None = None, ident: str | None = None):
 		self.on_hover: Callable[[bool], None] = on_hover
 		self.on_click: Callable = on_click
@@ -38,7 +38,6 @@ class UIObject:
 
 
 class UILabel(UIObject):
-
 	_text: str
 	font: pygame.font.Font
 	color: GameColor

@@ -49,9 +49,9 @@ class Animation:
 	curr: AnimationCheckpoint = None
 	end: AnimationCheckpoint = None
 	anim_type: str = "lin"
-	on_finish: Callable = None
-	on_start: Callable = None
-	starting_condition: Callable = None
+	on_finish: Callable | None = None
+	on_start: Callable | None = None
+	starting_condition: Callable | None = None
 	speed: float = 2.5
 	delay: float = 0
 	priority: int = 0

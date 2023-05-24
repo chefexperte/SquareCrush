@@ -12,8 +12,8 @@ class Level:
 	max_steps: int
 	winning_condition: Callable[[Game], bool]
 
-	def __init__(self, special_blocks: list[tuple[int, int, Tile]], max_steps: int = 10,
-				 winning_condition: Callable[[Game], bool] = None):
+	def __init__(self, special_blocks: list[tuple[int, int, Tile]], winning_condition: Callable[[Game], bool],
+				 max_steps: int = 10):
 		self.special_blocks: list[tuple[int, int, Tile]] = special_blocks
 		self.max_steps: int = max_steps
 		self.winning_condition: Callable[[Game], bool] = winning_condition
@@ -22,7 +22,7 @@ class Level:
 def all_blockers_at_bottom(game: Game) -> bool:
 	for x in range(GRID_SIZE):
 		for y in range(GRID_SIZE):
-			t: Tile = game.board[x][y]
+			t: Tile | None = game.board[x][y]
 			if not t:
 				continue
 			if t.addon == tile.TileAddon.BLOCKER and y != GRID_SIZE - 1:
@@ -33,9 +33,9 @@ def all_blockers_at_bottom(game: Game) -> bool:
 level_one = Level([
 	(3, 3, Tile(tile.TileColor.PINK.value, tile.TileAddon.BLOCKER)),
 	(5, 3, Tile(tile.TileColor.PINK.value, tile.TileAddon.BLOCKER))
-], 15, lambda game: (game.score >= 100 and all_blockers_at_bottom(game)))
+], lambda game: (game.score >= 100 and all_blockers_at_bottom(game)), 15)
 
-level_two = Level([], 15, lambda game: (game.score > 0))
+level_two = Level([], lambda game: (game.score > 0), 15)
 
 LEVELS: list[Level] = [level_one, level_two]
 

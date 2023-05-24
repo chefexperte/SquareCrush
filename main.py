@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import random
+from typing import Optional
 
 import pygame
 
@@ -143,10 +144,10 @@ def draw_in_game(game: Game):
 	tile_gravity(game)  # make the tiles fall down
 	refill_tiles(game)  # refill the board with new tiles if the number of tiles gets too low
 	check_win(game)  # check if the winning conditions are met and if so, end the level
-	label: UIObject = REGISTRY.get("score_label")
+	label: Optional[UIObject] = REGISTRY.get("score_label")
 	if label and type(label) == UILabel:
 		label.text = f"{strings.IN_GAME_SCORE}{game.score}"
-	label2: UIObject = REGISTRY.get("turns_label")
+	label2: Optional[UIObject] = REGISTRY.get("turns_label")
 	if label2 and type(label2) == UILabel:
 		label2.text = f"{strings.IN_GAME_STEPS}{game.steps_left}"
 	pygame.display.flip()
@@ -166,7 +167,7 @@ def in_game_events(event: pygame.event.Event, game: Game):
 			break
 
 
-def check_win(game):
+def check_win(game: Game) -> None:
 	if game.winning_condition(game) and len(game.no_draw) == 0:
 		game.winning_condition = lambda g: False
 		game.input_locked = True
@@ -247,6 +248,8 @@ def process_combinations(game: Game):
 		comb = combs[0]
 		for block in comb:
 			tile = game.board[block[0]][block[1]]
+			if not tile:
+				continue
 			col = tile.color
 			start = AnimationCheckpoint((block[0] + 0.5, block[1] + 0.5), col, 0, 0)
 			end = AnimationCheckpoint((block[0] + 0.5, block[1] + 0.5), col, 180, 0)
@@ -258,13 +261,16 @@ def process_combinations(game: Game):
 		game.chain_size += 1
 		x_total = 0
 		y_total = 0
-		for tile in comb:
-			x_total += tile[0]
-			y_total += tile[1]
+		for t in comb:
+			x_total += t[0]
+			y_total += t[1]
 		center_x = x_total / len(comb)
 		center_y = y_total / len(comb)
 		if len(comb) > 3:
-			color = game.board[comb[0][0]][comb[0][1]].color
+			til: Optional[Tile] = game.board[comb[0][0]][comb[0][1]]
+			if not til:
+				return
+			color = til.color
 			color = GameColor(min(255, color.r + 50), min(255, color.g + 50), min(255, color.b + 50))
 			bonus = 1
 			match len(comb):
@@ -283,7 +289,7 @@ def process_combinations(game: Game):
 									strings.SHOUTOUTS[text_intensity])
 
 
-def swap_drag(event, game):
+def swap_drag(event: pygame.event.Event, game: Game) -> None:
 	if event.type == pygame.MOUSEBUTTONDOWN:
 		if event.button == 1:  # Left mouse button
 			mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -314,8 +320,8 @@ def swap_drag(event, game):
 					# vertical
 					new_y = 1 if ydiff > 0 else -1
 				grid_x, grid_y = game.first_tile[0] + new_x, game.first_tile[1] + new_y
-				tile1: Tile = game.board[game.first_tile[0]][game.first_tile[1]]
-				tile2: Tile = game.board[grid_x][grid_y]
+				tile1: Optional[Tile] = game.board[game.first_tile[0]][game.first_tile[1]]
+				tile2: Optional[Tile] = game.board[grid_x][grid_y]
 				if (not tile1 or tile1.can_be_moved()) and (not tile2 or tile2.can_be_moved()):
 					if game.steps_left > 0:
 						game.steps_left -= 1

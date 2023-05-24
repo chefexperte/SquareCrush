@@ -14,7 +14,7 @@ from visual.animation import AnimationCheckpoint
 from visual.text import GameFonts
 
 
-def create_board() -> list[list[Tile]]:
+def create_board() -> list[list[Tile | None]]:
 	return [[Tile(random.choice(list(TileColor)).value) for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
 
 
@@ -30,13 +30,13 @@ class Game:
 	def set_animation_speed(self, speed: float) -> None:
 		self._ANIMATION_SPEED = speed
 
-	_ANIMATION_SPEED = 2.5
-	ANIM_SPEED_MULT = 1
-	EXPLOSION_SPEED = 2
-	FALL_SPEED = 6.25
-	ANIMATION_SPEED = property(lambda self: self._ANIMATION_SPEED * self.ANIM_SPEED_MULT, set_animation_speed)
+	_ANIMATION_SPEED: float = 2.5
+	ANIM_SPEED_MULT: float = 1
+	EXPLOSION_SPEED: float = 2
+	FALL_SPEED: float = 6.25
+	ANIMATION_SPEED: float = property(lambda self: self._ANIMATION_SPEED * self.ANIM_SPEED_MULT, set_animation_speed)
 
-	first_tile = None
+	first_tile: tuple[int, int] | None = None
 	board: list[list[Tile | None]] = create_board()
 	no_draw: set[tuple] = set()
 	animations: list[animation.TileAnimation]
@@ -89,7 +89,7 @@ class Game:
 			for comb in combs:
 				self.board[comb[1][0]][comb[1][1]].color = random.choice(list(TileColor)).value
 
-	def find_combinations(self):
+	def find_combinations(self) -> list[list[tuple[int, int]]]:
 		combinations = []
 
 		# check vertical combinations
@@ -124,7 +124,7 @@ class Game:
 				for n in range(1, GRID_SIZE - j):
 					tile2 = self.board[i][j + n]
 					tile2_color = tile2.color if tile2 else None
-					if tile1_color == tile2_color and ((i, j + n) not in self.no_draw) and tile2.can_combine():
+					if tile1_color == tile2_color and ((i, j + n) not in self.no_draw) and tile2 and tile2.can_combine():
 						comb_size += 1
 					else:
 						break
