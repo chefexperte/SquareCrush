@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 
 import pygame
 
@@ -14,7 +14,7 @@ class UIObject:
 
 	def __init__(self, surface: pygame.Surface | None = None, hitbox: pygame.Rect | None = None,
 				 on_hover: Callable[[bool], None] | None = None,
-				 on_click: Callable | None = None, ident: str | None = None):
+				 on_click: Optional[Callable] = None, ident: str | None = None):
 		self.on_hover: Callable[[bool], None] = on_hover
 		self.on_click: Callable = on_click
 		self.hitbox: pygame.Rect = hitbox
@@ -43,7 +43,7 @@ class UILabel(UIObject):
 	color: GameColor
 
 	def __init__(self, text: str, font: pygame.font.Font, color: GameColor, pos: tuple[float, float],
-				 on_hover: Callable | None = None, on_click: Callable | None = None, ident: str | None = None):
+				 on_hover: Optional[Callable] = None, on_click: Optional[Callable] = None, ident: str | None = None):
 		self.font = font
 		self.color = color
 		self.pos = pos
@@ -51,7 +51,7 @@ class UILabel(UIObject):
 		self.hitbox = pygame.Rect(pos, self.surface.get_size())
 		super().__init__(self.surface, self.hitbox, on_hover, on_click, ident)
 
-	def set_text(self, text: str) -> None:
+	def _set_text(self, text: str) -> None:
 		self._text = text
 		self.surface = self.font.render(self.text, True, self.color.to_tuple())
 		self.hitbox = pygame.Rect(self.pos, self.surface.get_size())
@@ -62,7 +62,7 @@ class UILabel(UIObject):
 	def center_pos(self) -> tuple[float, float]:
 		return self.pos[0] - self.surface.get_width() // 2, self.pos[1] - self.surface.get_height() // 2
 
-	text: str = property(lambda self: self._text, set_text)
+	text: str = property(lambda self: self._text, _set_text)
 
 
 REGISTRY: dict[str, UIObject] = {}

@@ -1,4 +1,4 @@
-import enum
+from __future__ import annotations
 
 
 class GameColor:
@@ -11,6 +11,13 @@ class GameColor:
 
 	def to_tuple(self):
 		return self.r, self.g, self.b, self.a
+
+	def interpolate(self, other: GameColor, percent: float):
+		i_r = int(self.r + (other.r - self.r) * percent)
+		i_g = int(self.g + (other.g - self.g) * percent)
+		i_b = int(self.b + (other.b - self.b) * percent)
+		i_a = int(self.a + (other.a - self.a) * percent)
+		return GameColor(i_r, i_g, i_b, i_a)
 
 	def __iter__(self):
 		return iter([self.r, self.g, self.b, self.a])

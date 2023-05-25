@@ -6,11 +6,10 @@ from typing import Callable
 
 from pygame import Surface
 
-from visual import animation
 from consts import GRID_SIZE
 from tile import Tile, TileColor
 from ui_object import UIObject
-from visual.animation import AnimationCheckpoint
+from visual import animation
 from visual.text import GameFonts
 
 
@@ -35,6 +34,7 @@ class Game:
 	EXPLOSION_SPEED: float = 2
 	FALL_SPEED: float = 6.25
 	ANIMATION_SPEED: float = property(lambda self: self._ANIMATION_SPEED * self.ANIM_SPEED_MULT, set_animation_speed)
+	UNMODIFIED_ANIMATION_SPEED: float = property(lambda self: self._ANIMATION_SPEED)
 
 	first_tile: tuple[int, int] | None = None
 	board: list[list[Tile | None]] = create_board()
@@ -165,21 +165,10 @@ def run_animations(game: Game):
 		if anim.progress == 0:
 			if anim.on_start:
 				anim.on_start()
-		x0, y0, angle0, size0 = anim.start.pos[0], anim.start.pos[1], anim.start.angle, anim.start.size
-		x2, y2, angle2, size2 = anim.end.pos[0], anim.end.pos[1], anim.end.angle, anim.end.size
+		# calculate current attributes
+		progress = anim.get_anim_type_progress()
+		anim.update(progress)
 		anim.draw(game.screen)
-		# go from curr towards end
-		x_diff_total = x2 - x0
-		y_diff_total = y2 - y0
-		angle_diff_total = angle2 - angle0
-		size_diff_total = size2 - size0
-		# subtract the tuples to get the difference between the two points
-		new_col = anim.start.color
-		anim.curr = AnimationCheckpoint(
-			(x0 + x_diff_total * anim.get_anim_type_progress(), y0 + y_diff_total * anim.get_anim_type_progress()),
-			new_col,
-			angle0 + angle_diff_total * anim.get_anim_type_progress(),
-			size0 + size_diff_total * anim.get_anim_type_progress())
 		if anim.progress >= 1:
 			if anim.on_finish:
 				anim.on_finish()

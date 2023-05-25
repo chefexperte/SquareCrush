@@ -3,18 +3,6 @@ import enum
 
 from util.game_color import GameColor
 
-COLORS_OLD = [
-	(153, 102, 255),  # purple
-	# (255, 127, 80),  # red
-	(255, 215, 0),  # yellow
-	(255, 182, 193),  # pink
-	(84, 224, 168),  # green
-	# (218, 112, 214),  # dark violet
-	# (240, 230, 140),  # khaki
-	# (255, 165, 0),  # dark orange
-	(0, 191, 255)  # blue
-]
-
 
 class TileColor(enum.Enum):
 	PURPLE = GameColor(153, 102, 255)

@@ -1,10 +1,10 @@
 from typing import Callable
 
-import tile
-from game import Game
-from consts import GRID_SIZE
-from tile import Tile
 import game as ga
+import tile
+from consts import GRID_SIZE
+from game import Game
+from tile import Tile
 
 
 class Level:
@@ -35,7 +35,7 @@ level_one = Level([
 	(5, 3, Tile(tile.TileColor.PINK.value, tile.TileAddon.BLOCKER))
 ], lambda game: (game.score >= 100 and all_blockers_at_bottom(game)), 15)
 
-level_two = Level([], lambda game: (game.score > 0), 15)
+level_two = Level([], lambda game: (game.score > 0), 5)
 
 LEVELS: list[Level] = [level_one, level_two]
 

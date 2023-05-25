@@ -14,8 +14,8 @@ def play_block_break(game: Game, color: GameColor, pos: tuple[int, int]):
 	for i in range(len(anims)):
 		anim = anims[i]
 		score_pos = AnimationCheckpoint((WINDOW_WIDTH // 2 // TILE_SIZE, -110 / TILE_SIZE), color, 0, 0.1)
-		dist = -game.ANIMATION_SPEED * 0.1 * (max(3., abs(score_pos.pos[1] - anim.end.pos[1])))
-		finish = TileAnimation(anim.tile, anim.end, score_pos, "lin", game.ANIMATION_SPEED * 2 + dist)
+		dist = -game.ANIMATION_SPEED * 0.1 * (max(3., abs(score_pos.pos[1] - anim.path[1].pos[1])))
+		finish = TileAnimation(anim.tile, {0: anim.path[1], 1: score_pos}, "lin", game.ANIMATION_SPEED * 2 + dist)
 		if i < 2:
 			finish.on_finish = lambda: game.add_score(1)
 		anim.on_finish = lambda a=finish: game.add_anim(a)
@@ -31,7 +31,7 @@ def create_explosion_effect(game: Game, color: GameColor, pos: tuple[int, int]):
 		end = AnimationCheckpoint((pos[0] + random.random() * 1.25 - 0.625, pos[1] + random.random() * 1.25 - 0.625),
 								  color,
 								  random.random() * 180 - 90, 0.35)
-		anim = TileAnimation(tile, start, end, "ease_out", game.EXPLOSION_SPEED * game.ANIM_SPEED_MULT)
+		anim = TileAnimation(tile, {0: start, 1: end}, "ease_out", game.EXPLOSION_SPEED * game.ANIM_SPEED_MULT)
 		animations.append(anim)
 	return animations
 
@@ -44,7 +44,7 @@ def create_circle_effect(game: Game, color: GameColor, pos: tuple[float, float],
 		goal = translate_coords(pos[0], pos[1], angle, size)
 		start = AnimationCheckpoint(pos, color, angle, 0.1)
 		end = AnimationCheckpoint(goal, color, angle + 360 * 2, 0.25)
-		anim = TileAnimation(Tile(color), start, end, "ease_out", speed + (random.random() - 0.5) * 2)
+		anim = TileAnimation(Tile(color), {0: start, 1: end}, "ease_out", speed + (random.random() - 0.5) * 2)
 		animations.append(anim)
 	return animations
 
@@ -57,8 +57,8 @@ def play_bonus_point_effect(game: Game, color: GameColor, pos: tuple[float, floa
 	for i in range(len(anims)):
 		anim = anims[i]
 		score_pos = AnimationCheckpoint((WINDOW_WIDTH // 2 // TILE_SIZE, -110 / TILE_SIZE), color, 0, 0.1)
-		dist = -game.ANIMATION_SPEED * 0.1 * (max(3., abs(score_pos.pos[1] - anim.end.pos[1])))
-		finish = TileAnimation(Tile(color), anim.end, score_pos, "lin", game.ANIMATION_SPEED * 2 + dist)
+		dist = -game.ANIMATION_SPEED * 0.1 * (max(3., abs(score_pos.pos[1] - anim.path[1].pos[1])))
+		finish = TileAnimation(Tile(color), {0: anim.path[1], 1: score_pos}, "lin", game.ANIMATION_SPEED * 2 + dist)
 		if i < remainder:
 			finish.on_finish = lambda: game.add_score(1 + score_per_particle)
 		else:
@@ -75,5 +75,5 @@ def play_shout_popup_effect(game: Game, color: GameColor, pos: tuple[float, floa
 	angle2 = random.randint(-20, 20)
 	p1 = AnimationCheckpoint(pos, color, angle1, 0.1)
 	p2 = AnimationCheckpoint(pos, color, angle2, size)
-	anim = Animation(label.surface, p1, p2, "ease_out", game.ANIMATION_SPEED * 0.5, priority=1)
+	anim = Animation(label.surface, {0: p1, 1: p2}, "ease_out", game.UNMODIFIED_ANIMATION_SPEED * 0.5, priority=1)
 	game.add_anim(anim)

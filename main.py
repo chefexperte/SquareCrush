@@ -16,7 +16,7 @@ from tile import Tile, TileColor
 from ui_object import UIObject, UILabel, REGISTRY
 from util.game_color import GameColor, GameColors
 from visual import image
-from visual.animation import TileAnimation, AnimationCheckpoint
+from visual.animation import TileAnimation, AnimationCheckpoint, Animation
 from visual.effect import play_bonus_point_effect, play_block_break, create_circle_effect, play_shout_popup_effect
 from visual.text import GameFonts
 
@@ -28,18 +28,18 @@ def swap_tiles(game: Game, pos1: tuple[int, int], pos2: tuple[int, int], animati
 	tile2 = board[pos2[0]][pos2[1]]
 	game.no_draw.add(pos2)
 	if tile1:
-		anim = TileAnimation(tile1, AnimationCheckpoint(pos1, tile1.color), AnimationCheckpoint(pos2, tile1.color))
+		anim = TileAnimation(tile1, {0: AnimationCheckpoint(pos1, tile1.color), 1: AnimationCheckpoint(pos2, tile1.color)})
 	else:
-		anim = TileAnimation(None, AnimationCheckpoint(pos1), AnimationCheckpoint(pos2))
+		anim = TileAnimation(None, {0: AnimationCheckpoint(pos1), 1: AnimationCheckpoint(pos2)})
 	anim.on_finish = lambda: game.no_draw.remove(pos2) if pos2 in game.no_draw else print(f"tried to remove {pos2}")
 	if animation_speed:
 		anim.speed = animation_speed
 	game.add_anim(anim)
 	game.no_draw.add(pos1)
 	if tile2:
-		anim2 = TileAnimation(tile2, AnimationCheckpoint(pos2, tile2.color), AnimationCheckpoint(pos1, tile2.color))
+		anim2 = TileAnimation(tile2, {0: AnimationCheckpoint(pos2, tile2.color), 1: AnimationCheckpoint(pos1, tile2.color)})
 	else:
-		anim2 = TileAnimation(None, AnimationCheckpoint(pos2), AnimationCheckpoint(pos1))
+		anim2 = TileAnimation(None, {0: AnimationCheckpoint(pos2), 1: AnimationCheckpoint(pos1)})
 	anim2.on_finish = lambda: game.no_draw.remove(pos1) if pos1 in game.no_draw else print(f"tried to remove {pos1}")
 	if animation_speed:
 		anim2.speed = animation_speed
@@ -203,6 +203,28 @@ def check_win(game: Game) -> None:
 			game.add_anim(dest)
 
 		destroy_remaining_tile()
+		# Show win label
+		CENTER = (GRID_SIZE / 2 - 0.5, GRID_SIZE / 2 - 0.5)
+		LOWER_CENTER = (CENTER[0], CENTER[1] + 1)
+		UI_CENTER = (CENTER[0] + 0.5) * TILE_SIZE, (CENTER[1] + 0.5) * TILE_SIZE + BOARD_OFFSET[1]
+		show_win_label = UILabel(strings.WIN_GAME, game.game_fonts.shout_font, GameColors.WHITE, UI_CENTER)
+		angle1 = random.randint(-40, 40)
+		angle2 = -angle1 / 2
+		angle3 = -angle2
+		p1 = AnimationCheckpoint(LOWER_CENTER, GameColors.WHITE, angle=angle1, size=0.25)
+		p2 = AnimationCheckpoint(CENTER, GameColor(185, 12, 45), angle=angle2, size=0.85)
+		p3 = AnimationCheckpoint(CENTER, GameColor(200, 12, 45), angle=angle3, size=0.85)
+		p4 = AnimationCheckpoint(CENTER, GameColor(235, 12, 55), size=1)
+		show_win_label_anim = Animation(show_win_label.surface, {0: p1, 0.65: p2, 0.85: p3, 1: p4}, priority=2,
+										speed=game.UNMODIFIED_ANIMATION_SPEED * 0.25, anim_type="ease_out")
+		show_win_label_anim.starting_condition = lambda game=game: len(game.no_draw) == 0 and len(game.animations) == 1
+
+		def set_color():
+			show_win_label.color = GameColor(235, 12, 55)
+			show_win_label.text = show_win_label.text
+
+		show_win_label_anim.on_finish = lambda game=game: (set_color(), game.ui_objects.append(show_win_label))
+		game.add_anim(show_win_label_anim)
 
 
 def tile_gravity(game: Game):
@@ -231,8 +253,8 @@ def refill_tiles(game: Game):
 		for i in range(GRID_SIZE):
 			if game.board[i][0] is None:
 				col: GameColor = random.choice(list(TileColor)).value
-				anim = TileAnimation(Tile(col), AnimationCheckpoint((i, -1), col, 180, 0),
-									 AnimationCheckpoint((i, 0), col, 0, 1), speed=game.ANIMATION_SPEED)
+				anim = TileAnimation(Tile(col), {0: AnimationCheckpoint((i, -1), col, 180, 0),
+												 1: AnimationCheckpoint((i, 0), col, 0, 1)}, speed=game.ANIMATION_SPEED)
 				anim.on_finish = \
 					lambda i=i: game.no_draw.remove((i, 0)) if (i, 0) in game.no_draw else print(
 						f"tried to remove {(i, 0)}")
@@ -253,7 +275,7 @@ def process_combinations(game: Game):
 			col = tile.color
 			start = AnimationCheckpoint((block[0] + 0.5, block[1] + 0.5), col, 0, 0)
 			end = AnimationCheckpoint((block[0] + 0.5, block[1] + 0.5), col, 180, 0)
-			anim = TileAnimation(tile, start, end)
+			anim = TileAnimation(tile, {0: start, 1: end})
 			anim.on_finish = lambda bl=block: remove_tile(game, bl)
 			game.no_draw.add(block)
 			game.add_anim(anim)
