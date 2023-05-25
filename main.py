@@ -207,7 +207,7 @@ def check_win(game: Game) -> None:
 		CENTER = (GRID_SIZE / 2 - 0.5, GRID_SIZE / 2 - 0.5)
 		LOWER_CENTER = (CENTER[0], CENTER[1] + 1)
 		UI_CENTER = (CENTER[0] + 0.5) * TILE_SIZE, (CENTER[1] + 0.5) * TILE_SIZE + BOARD_OFFSET[1]
-		show_win_label = UILabel(strings.WIN_GAME, game.game_fonts.shout_font, GameColors.WHITE, UI_CENTER)
+		show_win_label = UILabel(strings.WIN_GAME, game.game_fonts.shout_font, GameColors.WHITE, UI_CENTER, ident="win_label")
 		angle1 = random.randint(-40, 40)
 		angle2 = -angle1 / 2
 		angle3 = -angle2
@@ -307,7 +307,8 @@ def process_combinations(game: Game):
 									game.chain_size)
 		if len(comb) > 3 or game.chain_size >= 2:
 			text_intensity = min(9, max(0, (len(comb) - 3) * 3 + game.chain_size - 1 + random.randint(-2, 2)))
-			play_shout_popup_effect(game, GameColor(255, 0, 0), (center_x, center_y), text_intensity / 5,
+			size = 0.5 * min(7, max(2, text_intensity)) / 5 + 0.5
+			play_shout_popup_effect(game, GameColor(255, 0, 0), (center_x, center_y), size,
 									strings.SHOUTOUTS[text_intensity])
 
 

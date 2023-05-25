@@ -5,6 +5,7 @@ import tile
 from consts import GRID_SIZE
 from game import Game
 from tile import Tile
+from ui_object import REGISTRY
 
 
 class Level:
@@ -42,6 +43,9 @@ LEVELS: list[Level] = [level_one, level_two]
 
 def load_level(game: Game, level: Level):
 	print("Loading level...")
+	wl = REGISTRY.get("win_label")
+	if wl:
+		game.ui_objects.remove(wl)
 	game.board = ga.create_board()
 	game.remove_combinations()
 	game.score = 0
