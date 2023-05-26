@@ -1,6 +1,6 @@
 # SquareCrush
 
-![Early gameplay](README_assets/gameplay1.webm)
+[Screencast from 2023-05-26 02-08-08 (trimmed).webm](https://github.com/chefexperte/SquareCrush/assets/12102112/a8ba080f-42db-421f-b013-efd50d8f810b)
 
 This is a small game written in Python using the pygame package.  
 Because I am a crazy young person, some of this code was even written by ChatGPT, because why the hell not. 
