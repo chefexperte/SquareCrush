@@ -1,5 +1,7 @@
 # SquareCrush
 
+![Early gameplay](README_assets/gameplay1.webm)
+
 This is a small game written in Python using the pygame package.  
 Because I am a crazy young person, some of this code was even written by ChatGPT, because why the hell not. 
 

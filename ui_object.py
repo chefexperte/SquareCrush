@@ -11,14 +11,16 @@ class UIObject:
 	hitbox: pygame.Rect
 	surface: pygame.Surface
 	hovering: bool = False
+	priority: int = 0
 
 	def __init__(self, surface: pygame.Surface | None = None, hitbox: pygame.Rect | None = None,
 				 on_hover: Callable[[bool], None] | None = None,
-				 on_click: Optional[Callable] = None, ident: str | None = None):
+				 on_click: Optional[Callable] = None, ident: str | None = None, priority: int = 0):
 		self.on_hover: Callable[[bool], None] = on_hover
 		self.on_click: Callable = on_click
 		self.hitbox: pygame.Rect = hitbox
 		self.surface: pygame.Surface = surface
+		self.priority = priority
 		if not ident:
 			ident = str(id(self))
 		REGISTRY[ident] = self
@@ -43,13 +45,14 @@ class UILabel(UIObject):
 	color: GameColor
 
 	def __init__(self, text: str, font: pygame.font.Font, color: GameColor, pos: tuple[float, float],
-				 on_hover: Optional[Callable] = None, on_click: Optional[Callable] = None, ident: str | None = None):
+				 on_hover: Optional[Callable] = None, on_click: Optional[Callable] = None, ident: str | None = None,
+				 priority: int = 0):
 		self.font = font
 		self.color = color
 		self.pos = pos
 		self.text = text
 		self.hitbox = pygame.Rect(pos, self.surface.get_size())
-		super().__init__(self.surface, self.hitbox, on_hover, on_click, ident)
+		super().__init__(self.surface, self.hitbox, on_hover, on_click, ident, priority)
 
 	def _set_text(self, text: str) -> None:
 		self._text = text

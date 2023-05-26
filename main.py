@@ -28,7 +28,8 @@ def swap_tiles(game: Game, pos1: tuple[int, int], pos2: tuple[int, int], animati
 	tile2 = board[pos2[0]][pos2[1]]
 	game.no_draw.add(pos2)
 	if tile1:
-		anim = TileAnimation(tile1, {0: AnimationCheckpoint(pos1, tile1.color), 1: AnimationCheckpoint(pos2, tile1.color)})
+		anim = TileAnimation(tile1,
+							 {0: AnimationCheckpoint(pos1, tile1.color), 1: AnimationCheckpoint(pos2, tile1.color)})
 	else:
 		anim = TileAnimation(None, {0: AnimationCheckpoint(pos1), 1: AnimationCheckpoint(pos2)})
 	anim.on_finish = lambda: game.no_draw.remove(pos2) if pos2 in game.no_draw else print(f"tried to remove {pos2}")
@@ -37,7 +38,8 @@ def swap_tiles(game: Game, pos1: tuple[int, int], pos2: tuple[int, int], animati
 	game.add_anim(anim)
 	game.no_draw.add(pos1)
 	if tile2:
-		anim2 = TileAnimation(tile2, {0: AnimationCheckpoint(pos2, tile2.color), 1: AnimationCheckpoint(pos1, tile2.color)})
+		anim2 = TileAnimation(tile2,
+							  {0: AnimationCheckpoint(pos2, tile2.color), 1: AnimationCheckpoint(pos1, tile2.color)})
 	else:
 		anim2 = TileAnimation(None, {0: AnimationCheckpoint(pos2), 1: AnimationCheckpoint(pos1)})
 	anim2.on_finish = lambda: game.no_draw.remove(pos1) if pos1 in game.no_draw else print(f"tried to remove {pos1}")
@@ -57,7 +59,7 @@ def remove_tile(game: Game, bl: tuple[int, int]):
 
 
 def draw_ingame_ui(game: Game):
-	for o in game.ui_objects:
+	for o in sorted(game.ui_objects, key=lambda x: x.priority):
 		o.draw(game.screen)
 		if o.hitbox.collidepoint(game.mouse_pos):
 			o.hover(True)
@@ -204,10 +206,17 @@ def check_win(game: Game) -> None:
 
 		destroy_remaining_tile()
 		# Show win label
-		CENTER = (GRID_SIZE / 2 - 0.5, GRID_SIZE / 2 - 0.5)
-		LOWER_CENTER = (CENTER[0], CENTER[1] + 1)
+		CENTER = (GRID_SIZE / 2 - 0.5, GRID_SIZE / 2 - 3.5)
+		LOWER_CENTER = (CENTER[0], CENTER[1] + 2)
 		UI_CENTER = (CENTER[0] + 0.5) * TILE_SIZE, (CENTER[1] + 0.5) * TILE_SIZE + BOARD_OFFSET[1]
-		show_win_label = UILabel(strings.WIN_GAME, game.game_fonts.shout_font, GameColors.WHITE, UI_CENTER, ident="win_label")
+		# background box
+		bg_box = pygame.Surface((WINDOW_WIDTH * 0.75, WINDOW_HEIGHT * 0.5), pygame.SRCALPHA)
+		bg_box.fill((20, 20, 20, 200))
+		bg_box_rect = pygame.Rect(WINDOW_WIDTH * 0.125, WINDOW_HEIGHT * 0.25, WINDOW_WIDTH * 0.75, WINDOW_HEIGHT * 0.5)
+		bg_box_obj = UIObject(bg_box, bg_box_rect, ident="win_bg_box")
+		# text
+		show_win_label = UILabel(strings.WIN_GAME, game.game_fonts.shout_font, GameColors.WHITE, UI_CENTER,
+								 ident="win_label", priority=1)
 		angle1 = random.randint(-40, 40)
 		angle2 = -angle1 / 2
 		angle3 = -angle2
@@ -219,11 +228,29 @@ def check_win(game: Game) -> None:
 										speed=game.UNMODIFIED_ANIMATION_SPEED * 0.25, anim_type="ease_out")
 		show_win_label_anim.starting_condition = lambda game=game: len(game.no_draw) == 0 and len(game.animations) == 1
 
-		def set_color():
+		def show_win_screen():
 			show_win_label.color = GameColor(235, 12, 55)
 			show_win_label.text = show_win_label.text
+			game.ui_objects.append(show_win_label)
+			game.ui_objects.append(bg_box_obj)
+			for i in range(3):
+				col: GameColor = random.choice(list(TileColor)).value
+				start_pos = (2 + i * 2, 4.5)
+				end_pos = (2 + i * 2, 4)
+				star_size = TILE_SIZE * 1.5
+				an = TileAnimation(Tile(col), {0: AnimationCheckpoint(start_pos, col, 360, 0),
+											   1: AnimationCheckpoint(end_pos, col, 0, 1)},
+								   speed=game.UNMODIFIED_ANIMATION_SPEED,
+								   delay=1 * i)
+				star_surf = pygame.Surface((star_size, star_size), pygame.SRCALPHA)
+				star_rect = pygame.Rect(end_pos[0] * TILE_SIZE + BOARD_OFFSET[0],
+										end_pos[1] * TILE_SIZE + BOARD_OFFSET[1], star_size, star_size)
+				star_surf.fill(col.to_tuple())
+				star = UIObject(star_surf, star_rect, priority=1, ident="star" + str(i))
+				an.on_finish = lambda game=game, star=star: game.ui_objects.append(star)
+				game.add_anim(an)
 
-		show_win_label_anim.on_finish = lambda game=game: (set_color(), game.ui_objects.append(show_win_label))
+		show_win_label_anim.on_finish = lambda game=game: show_win_screen()
 		game.add_anim(show_win_label_anim)
 
 
