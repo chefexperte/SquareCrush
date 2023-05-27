@@ -52,6 +52,7 @@ class Game:
 	chain_size: int = 0
 	ui_objects: list[UIObject]
 	game_fonts: GameFonts
+	star_score: list[int]
 
 	def __init__(self):
 		self.animations: list[animation.Animation] = []

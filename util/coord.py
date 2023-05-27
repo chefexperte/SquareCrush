@@ -23,3 +23,7 @@ def get_rect_in_grid(x, y, size_x, size_y):
 	ty = -0.5 * size_y + (y + 0.5) * TILE_SIZE + BOARD_OFFSET[1]
 	rect = pygame.Rect(tx, ty, size_x, size_y)
 	return rect
+
+
+def real_coord_to_grid(x, y):
+	return (x - BOARD_OFFSET[0]) / TILE_SIZE - 0.5, (y - BOARD_OFFSET[1]) / TILE_SIZE - 0.5

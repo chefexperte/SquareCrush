@@ -14,7 +14,7 @@ from rooms.level_selection import level_selection_events
 from rooms.main_menu import main_menu_events
 from tile import Tile, TileColor
 from ui_object import UIObject, UILabel, REGISTRY
-from util.coord import get_rect_in_grid
+from util.coord import get_rect_in_grid, real_coord_to_grid
 from util.game_color import GameColor, GameColors
 from util.priority_object import PriorityDrawable
 from visual import image
@@ -238,8 +238,9 @@ def check_win(game: Game) -> None:
 			show_win_label.color = GameColor(235, 12, 55)
 			show_win_label.text = show_win_label.text
 			game.ui_objects.append(show_win_label)
-			game.ui_objects.append(bg_box_obj)
 			for i in range(3):
+				if game.star_score[i] > game.score:
+					continue
 				col: GameColor = random.choice(list(TileColor)).value
 				start_pos = (2 + i * 2, 5)
 				end_pos = (2 + i * 2, 4)
@@ -247,7 +248,7 @@ def check_win(game: Game) -> None:
 				star_size = TILE_SIZE * star_size_mult
 				an = TileAnimation(Tile(col), {0: AnimationCheckpoint(start_pos, col, 360, 0),
 											   1: AnimationCheckpoint(end_pos, col, 0, star_size_mult)},
-								   speed=game.UNMODIFIED_ANIMATION_SPEED*0.2,
+								   speed=game.UNMODIFIED_ANIMATION_SPEED * 0.5,
 								   delay=1 * i, priority=2, anim_type="ease_out")
 				star_surf = pygame.Surface((star_size, star_size), pygame.SRCALPHA)
 				star_rect = get_rect_in_grid(*end_pos, star_size, star_size)
@@ -256,7 +257,15 @@ def check_win(game: Game) -> None:
 				an.on_finish = lambda game=game, star=star: game.ui_objects.append(star)
 				game.add_anim(an)
 
+		# show background box
+		coord = real_coord_to_grid(*bg_box_rect.center)
+		box_anim = Animation(bg_box, {0: AnimationCheckpoint(coord, color=GameColors.WHITE, size=0),
+									  1: AnimationCheckpoint(coord, color=GameColors.WHITE)},
+							 speed=game.UNMODIFIED_ANIMATION_SPEED * 0.5, anim_type="ease_out")
+		box_anim.on_finish = lambda game=game: game.ui_objects.append(bg_box_obj)
+		# show win label
 		show_win_label_anim.on_finish = lambda game=game: show_win_screen()
+		show_win_label_anim.on_start = lambda game=game: game.add_anim(box_anim)
 		game.add_anim(show_win_label_anim)
 
 
