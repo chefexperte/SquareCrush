@@ -8,6 +8,7 @@ from consts import TILE_SIZE, BOARD_OFFSET
 from draw import draw_rotated_rect
 from tile import Tile, TileAddon
 from util.game_color import GameColor
+from util.priority_object import PriorityDrawable
 
 
 def tile_to_real_pos(pos: tuple[float, float]) -> tuple[float, float]:
@@ -28,7 +29,7 @@ class AnimationCheckpoint:
 		self.color = color
 
 
-class Animation:
+class Animation(PriorityDrawable):
 	def __init__(self, surface: pygame.Surface,
 				 path: dict[float, AnimationCheckpoint] | None = None, anim_type: str = "lin",
 				 speed: float = 2.5, delay: float = 0,
@@ -51,6 +52,7 @@ class Animation:
 		self.anim_type = anim_type
 		self.speed = speed
 		self.priority = priority
+		PriorityDrawable.__init__(self, priority)
 
 	progress: float = 0
 	surface: pygame.Surface = None
@@ -63,6 +65,7 @@ class Animation:
 	speed: float = 2.5
 	delay: float = 0
 	priority: int = 0
+	is_running: bool = False
 
 	def get_anim_type_progress(self) -> float:
 		if self.anim_type == "ease_out":
@@ -74,10 +77,10 @@ class Animation:
 		return min(1., self.progress)
 
 	def update(self, progress: float):
-		if progress == 0:
+		if progress <= 0:
 			self.curr = self.path[0]
 			return
-		if progress == 1:
+		if progress >= 1:
 			self.curr = self.path[1]
 			return
 		previous_checkpoint: tuple[float, AnimationCheckpoint] = 0, self.path[0]
@@ -121,10 +124,10 @@ class Animation:
 class TileAnimation(Animation):
 	def __init__(self, tile: Tile | None = Tile(GameColor()),
 				 path: dict[float, AnimationCheckpoint] | None = None, anim_type: str = "lin",
-				 speed: float = 2.5, delay: float = 0):
+				 speed: float = 2.5, delay: float = 0, priority: int = 0):
 		self.tile = tile
 		surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-		super().__init__(surface, path, anim_type, speed, delay)
+		super().__init__(surface, path, anim_type, speed, delay, priority)
 
 	tile: Tile = None
 

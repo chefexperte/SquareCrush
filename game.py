@@ -10,6 +10,7 @@ from consts import GRID_SIZE
 from tile import Tile, TileColor
 from ui_object import UIObject
 from visual import animation
+from visual.animation import Animation
 from visual.text import GameFonts
 
 
@@ -154,22 +155,27 @@ class Game:
 		self.animations.clear()
 		self.ANIM_SPEED_MULT = 1
 
+	def can_start(self, anim: Animation) -> bool:
+		if anim.starting_condition and not anim.starting_condition():
+			return False
+		if anim.delay > 0:
+			anim.delay -= (1 / self.FPS)
+			return False
+		anim.is_running = True
+		return True
+
 
 def run_animations(game: Game):
 	for anim in game.animations.copy():
-		if anim.starting_condition and not anim.starting_condition():
-			continue
-		if anim.delay > 0:
-			anim.delay -= (1 / game.FPS)
+		if not game.can_start(anim) and not anim.is_running:
 			continue
 		if anim.progress == 0:
 			if anim.on_start:
 				anim.on_start()
 		# calculate current attributes
-		progress = anim.get_anim_type_progress()
-		anim.update(progress)
-		anim.draw(game.screen)
-		if anim.progress >= 1:
+		anim.update(anim.get_anim_type_progress())
+		# anim.draw(game.screen)
+		if anim.progress > 1:
 			if anim.on_finish:
 				anim.on_finish()
 			game.animations.remove(anim)

@@ -14,7 +14,9 @@ from rooms.level_selection import level_selection_events
 from rooms.main_menu import main_menu_events
 from tile import Tile, TileColor
 from ui_object import UIObject, UILabel, REGISTRY
+from util.coord import get_rect_in_grid
 from util.game_color import GameColor, GameColors
+from util.priority_object import PriorityDrawable
 from visual import image
 from visual.animation import TileAnimation, AnimationCheckpoint, Animation
 from visual.effect import play_bonus_point_effect, play_block_break, create_circle_effect, play_shout_popup_effect
@@ -58,13 +60,17 @@ def remove_tile(game: Game, bl: tuple[int, int]):
 		print(f"{bl} was not in no_draw")
 
 
-def draw_ingame_ui(game: Game):
-	for o in sorted(game.ui_objects, key=lambda x: x.priority):
-		o.draw(game.screen)
+def draw_objects(game: Game):
+	all_objs: list[PriorityDrawable] = []
+	all_objs.extend([a for a in game.animations if game.can_start(a) or a.is_running])
+	all_objs.extend(game.ui_objects)
+	for o in game.ui_objects:
 		if o.hitbox.collidepoint(game.mouse_pos):
 			o.hover(True)
 		else:
 			o.hover(False)
+	for o in sorted(all_objs, key=lambda x: x.priority):
+		o.draw(game.screen)
 
 
 def main(game: Game):
@@ -139,9 +145,9 @@ def draw_in_game(game: Game):
 				game.input_locked = False
 	game.screen.fill((0, 0, 0))
 	draw.draw_board(game)  # draw the board
-	run_animations(game)  # update the animations
 	pygame.draw.rect(game.screen, (97, 125, 117), (0, 0, WINDOW_WIDTH, 40))  # draw the top bar
-	draw_ingame_ui(game)  # draw the ui
+	draw_objects(game)  # draw the ui
+	run_animations(game)  # update the animations
 	process_combinations(game)  # remove the tiles that are in combinations
 	tile_gravity(game)  # make the tiles fall down
 	refill_tiles(game)  # refill the board with new tiles if the number of tiles gets too low
@@ -235,16 +241,16 @@ def check_win(game: Game) -> None:
 			game.ui_objects.append(bg_box_obj)
 			for i in range(3):
 				col: GameColor = random.choice(list(TileColor)).value
-				start_pos = (2 + i * 2, 4.5)
+				start_pos = (2 + i * 2, 5)
 				end_pos = (2 + i * 2, 4)
-				star_size = TILE_SIZE * 1.5
+				star_size_mult = 1.5
+				star_size = TILE_SIZE * star_size_mult
 				an = TileAnimation(Tile(col), {0: AnimationCheckpoint(start_pos, col, 360, 0),
-											   1: AnimationCheckpoint(end_pos, col, 0, 1)},
-								   speed=game.UNMODIFIED_ANIMATION_SPEED,
-								   delay=1 * i)
+											   1: AnimationCheckpoint(end_pos, col, 0, star_size_mult)},
+								   speed=game.UNMODIFIED_ANIMATION_SPEED*0.2,
+								   delay=1 * i, priority=2, anim_type="ease_out")
 				star_surf = pygame.Surface((star_size, star_size), pygame.SRCALPHA)
-				star_rect = pygame.Rect(end_pos[0] * TILE_SIZE + BOARD_OFFSET[0],
-										end_pos[1] * TILE_SIZE + BOARD_OFFSET[1], star_size, star_size)
+				star_rect = get_rect_in_grid(*end_pos, star_size, star_size)
 				star_surf.fill(col.to_tuple())
 				star = UIObject(star_surf, star_rect, priority=1, ident="star" + str(i))
 				an.on_finish = lambda game=game, star=star: game.ui_objects.append(star)

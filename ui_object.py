@@ -3,9 +3,10 @@ from typing import Callable, Optional
 import pygame
 
 from util.game_color import GameColor
+from util.priority_object import PriorityDrawable
 
 
-class UIObject:
+class UIObject(PriorityDrawable):
 	on_hover: Callable[[bool], None]
 	on_click: Callable
 	hitbox: pygame.Rect
@@ -24,6 +25,7 @@ class UIObject:
 		if not ident:
 			ident = str(id(self))
 		REGISTRY[ident] = self
+		PriorityDrawable.__init__(self, priority)
 
 	def hover(self, yes: bool):
 		self.hovering = yes
@@ -52,7 +54,7 @@ class UILabel(UIObject):
 		self.pos = pos
 		self.text = text
 		self.hitbox = pygame.Rect(pos, self.surface.get_size())
-		super().__init__(self.surface, self.hitbox, on_hover, on_click, ident, priority)
+		UIObject.__init__(self, self.surface, self.hitbox, on_hover, on_click, ident, priority)
 
 	def _set_text(self, text: str) -> None:
 		self._text = text
